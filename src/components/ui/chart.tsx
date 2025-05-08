@@ -2,9 +2,7 @@
 import { ApexOptions } from "apexcharts";
 import React from "react";
 import { Area, AreaChart, BarChart, Bar, LineChart as RechartsLineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
-import dynamic from "next/dynamic";
-
-const ApexCharts = dynamic(() => import("react-apexcharts"), { ssr: false });
+import ApexChart from "react-apexcharts";
 
 interface ChartProps {
   options?: ApexOptions;
@@ -18,7 +16,7 @@ interface ChartProps {
 export const Chart = ({ options, series, type = "line", height = "100%", width = "100%", className = "" }: ChartProps) => {
   return (
     <div className={className} style={{ width, height }}>
-      <ApexCharts options={options} series={series} type={type} height={height} width={width} />
+      <ApexChart options={options} series={series} type={type} height={height} width={width} />
     </div>
   );
 };
