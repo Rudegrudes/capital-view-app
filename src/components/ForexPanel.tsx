@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -82,10 +81,15 @@ const ForexPanel = () => {
   // Prepare pie chart data for win/loss ratio
   const winCount = operations.filter(op => (op.profit || 0) > 0).length;
   const lossCount = operations.filter(op => (op.profit || 0) <= 0).length;
-  const pieChartData = [
-    { value: winCount, name: 'Ganhos' },
-    { value: lossCount, name: 'Perdas' }
-  ];
+  const pieChartSeries = [{
+    name: 'Trading Results',
+    data: [winCount, lossCount]
+  }];
+  
+  const pieChartOptions = {
+    labels: ['Ganhos', 'Perdas'],
+    colors: ['#2A9D8F', '#e63946']
+  };
 
   // Prepare line chart data for performance over time
   const lineChartData = operations.map((op, index) => {
@@ -98,6 +102,18 @@ const ForexPanel = () => {
       accumulated: previousProfit + (op.profit || 0)
     };
   });
+
+  const lineChartSeries = [{
+    name: 'Resultado',
+    data: lineChartData.map(data => data.accumulated),
+  }];
+  
+  const lineChartOptions = {
+    xaxis: {
+      categories: lineChartData.map(data => data.name),
+    },
+    colors: ['#264653']
+  };
 
   return (
     <div className="pt-16 animate-fade-in">
@@ -203,62 +219,17 @@ const ForexPanel = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="h-[300px]">
                 <Chart 
-                  options={{
-                    chart: { type: 'pie' },
-                    labels: ['Ganhos', 'Perdas'],
-                    colors: ['#2A9D8F', '#e63946'],
-                    legend: {
-                      position: 'bottom'
-                    },
-                    responsive: [{
-                      breakpoint: 480,
-                      options: {
-                        chart: {
-                          height: 250
-                        },
-                        legend: {
-                          position: 'bottom'
-                        }
-                      }
-                    }]
-                  }}
-                  series={[winCount, lossCount]}
                   type="pie"
+                  series={pieChartSeries}
+                  options={pieChartOptions}
                   height={300}
                 />
               </div>
               <div className="h-[300px]">
                 <Chart 
-                  options={{
-                    chart: { toolbar: { show: false } },
-                    stroke: { curve: 'smooth', width: 3 },
-                    colors: ['#264653'],
-                    xaxis: {
-                      categories: lineChartData.map(data => data.name),
-                      labels: { show: false }
-                    },
-                    yaxis: {
-                      labels: {
-                        formatter: function (val) {
-                          return `${val.toFixed(2)}`;
-                        }
-                      }
-                    },
-                    tooltip: {
-                      y: {
-                        formatter: function (val) {
-                          return `${val.toFixed(2)}`;
-                        }
-                      }
-                    }
-                  }}
-                  series={[
-                    {
-                      name: 'Resultado',
-                      data: lineChartData.map(data => data.accumulated),
-                    }
-                  ]}
                   type="line"
+                  series={lineChartSeries}
+                  options={lineChartOptions}
                   height={300}
                 />
               </div>

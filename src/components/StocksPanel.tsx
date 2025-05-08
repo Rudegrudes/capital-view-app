@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -67,17 +66,18 @@ const StocksPanel = () => {
 
   const totalProfit = operations.reduce((acc, op) => acc + (op.profit || 0), 0);
   
-  // Prepare chart data
-  const chartData = operations.map((op, index) => {
-    const previousProfit = index > 0 
-      ? operations.slice(0, index).reduce((acc, prevOp) => acc + (prevOp.profit || 0), 0) 
-      : 0;
-    return {
-      name: `Op ${index + 1} (${op.stockName})`,
-      profit: op.profit || 0,
-      accumulated: previousProfit + (op.profit || 0)
-    };
-  });
+  // Prepare chart data for the updated Chart component
+  const lineChartSeries = [{
+    name: 'Lucro Acumulado',
+    data: chartData.map(data => data.accumulated),
+  }];
+  
+  const chartOptions = {
+    xaxis: {
+      categories: chartData.map(data => data.name),
+    },
+    colors: ['#2A9D8F']
+  };
 
   return (
     <div className="pt-16 animate-fade-in">
@@ -170,44 +170,9 @@ const StocksPanel = () => {
           {operations.length > 0 ? (
             <div className="h-[300px]">
               <Chart 
-                options={{
-                  chart: { toolbar: { show: false } },
-                  stroke: { curve: 'smooth', width: 3 },
-                  colors: ['#2A9D8F'],
-                  fill: {
-                    type: 'gradient',
-                    gradient: {
-                      shadeIntensity: 1,
-                      opacityFrom: 0.7,
-                      opacityTo: 0.2,
-                      stops: [0, 90, 100]
-                    }
-                  },
-                  xaxis: {
-                    categories: chartData.map(data => data.name),
-                  },
-                  yaxis: {
-                    labels: {
-                      formatter: function (val) {
-                        return `R$ ${val.toFixed(2)}`;
-                      }
-                    }
-                  },
-                  tooltip: {
-                    y: {
-                      formatter: function (val) {
-                        return `R$ ${val.toFixed(2)}`;
-                      }
-                    }
-                  }
-                }}
-                series={[
-                  {
-                    name: 'Lucro Acumulado',
-                    data: chartData.map(data => data.accumulated),
-                  }
-                ]}
                 type="area"
+                series={lineChartSeries}
+                options={chartOptions}
                 height={300}
                 className="mt-4"
               />
