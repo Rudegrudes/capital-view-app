@@ -31,13 +31,24 @@ const ForexPanel = () => {
   const [initialCapital, setInitialCapital] = useState("30");
 
   const calculateProfit = (operation: Omit<ForexOperation, "id" | "profit" | "roi">) => {
-    const priceDiff = Math.abs(operation.exitPrice - operation.entryPrice);
-    const isProfit = (operation.type === "Buy" && operation.exitPrice > operation.entryPrice) ||
-                    (operation.type === "Sell" && operation.exitPrice < operation.entryPrice);
+    // Corrigindo o cálculo de profit para Forex
+    // Para pares de moedas, o cálculo é baseado na diferença de pontos * tamanho do lote * valor do pip
     
-    // Simplified forex calculation
-    const profitValue = priceDiff * operation.lotSize * 100;
-    return isProfit ? profitValue : -profitValue;
+    // Calculando a diferença de pontos (considerando 5 casas decimais como padrão para forex)
+    const priceDiff = operation.exitPrice - operation.entryPrice;
+    
+    // Determinar se é lucro ou prejuízo baseado no tipo de operação
+    let profitValue;
+    
+    if (operation.type === "Buy") {
+      // Se for compra (Buy), lucro quando preço saída > preço entrada
+      profitValue = priceDiff * operation.lotSize * 100000;
+    } else {
+      // Se for venda (Sell), lucro quando preço entrada > preço saída
+      profitValue = -priceDiff * operation.lotSize * 100000;
+    }
+    
+    return profitValue;
   };
 
   const handleAddOperation = () => {

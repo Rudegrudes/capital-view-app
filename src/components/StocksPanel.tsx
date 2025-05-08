@@ -29,9 +29,17 @@ const StocksPanel = () => {
   const [quantity, setQuantity] = useState("");
 
   const calculateProfit = (operation: Omit<StockOperation, "id" | "profit">) => {
+    // Corrigindo o cálculo de lucro para ações
     const entryValue = operation.entryPrice * operation.quantity;
     const exitValue = operation.exitPrice * operation.quantity;
-    return operation.type === "Compra" ? exitValue - entryValue : entryValue - exitValue;
+    
+    if (operation.type === "Compra") {
+      // Na compra: lucro quando preço saída > preço entrada
+      return exitValue - entryValue;
+    } else {
+      // Na venda: lucro quando preço entrada > preço saída
+      return entryValue - exitValue;
+    }
   };
 
   const handleAddOperation = () => {
