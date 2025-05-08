@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -65,6 +66,19 @@ const StocksPanel = () => {
   };
 
   const totalProfit = operations.reduce((acc, op) => acc + (op.profit || 0), 0);
+  
+  // Generate chart data from operations
+  const chartData = operations.map((operation, index) => {
+    // For each operation, calculate the accumulated profit up to this point
+    const accumulated = operations
+      .slice(0, index + 1)
+      .reduce((acc, op) => acc + (op.profit || 0), 0);
+      
+    return {
+      name: new Date(operation.date).toLocaleDateString(),
+      accumulated,
+    };
+  });
   
   // Prepare chart data for the updated Chart component
   const lineChartSeries = [{
