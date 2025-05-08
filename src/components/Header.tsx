@@ -1,6 +1,7 @@
 
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
+import LoginButton from "./LoginButton";
 
 type HeaderProps = {
   activeTab: "stocks" | "forex";
@@ -33,7 +34,7 @@ const Header = ({ activeTab, setActiveTab }: HeaderProps) => {
           </div>
           
           {/* Desktop menu */}
-          <nav className="hidden md:flex space-x-4">
+          <nav className="hidden md:flex items-center space-x-4">
             <button
               className={`px-4 py-2 rounded-md hover:bg-gray transition-colors ${
                 activeTab === "stocks" ? "bg-teal text-white" : "text-teal"
@@ -50,6 +51,7 @@ const Header = ({ activeTab, setActiveTab }: HeaderProps) => {
             >
               💱 Forex
             </button>
+            <LoginButton />
           </nav>
         </div>
       </div>
@@ -80,6 +82,9 @@ const Header = ({ activeTab, setActiveTab }: HeaderProps) => {
             >
               💱 Forex
             </button>
+            <div className="mt-2 px-4 py-2">
+              <LoginButton />
+            </div>
           </div>
         </div>
       )}
