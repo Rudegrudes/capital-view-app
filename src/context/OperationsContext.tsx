@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
@@ -35,6 +34,8 @@ type OperationsContextType = {
   forexOperations: ForexOperation[];
   addStockOperation: (operation: Omit<StockOperation, "id" | "profit">) => Promise<void>;
   addForexOperation: (operation: Omit<ForexOperation, "id" | "profit" | "roi">) => Promise<void>;
+  removeStockOperation: (id: number) => Promise<void>;
+  removeForexOperation: (id: number) => Promise<void>;
   loading: boolean;
 };
 
@@ -72,7 +73,7 @@ export const OperationsProvider = ({ children }: { children: ReactNode }) => {
       setLoading(true);
       const { data, error } = await supabase
         .from("stock_operations")
-        .select("*")
+        .select()
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -106,7 +107,7 @@ export const OperationsProvider = ({ children }: { children: ReactNode }) => {
       setLoading(true);
       const { data, error } = await supabase
         .from("forex_operations")
-        .select("*")
+        .select()
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -274,6 +275,118 @@ export const OperationsProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // Remove stock operation
+  const removeStockOperation = async (id: number) => {
+    if (!user) {
+      toast.error("Você precisa estar logado para remover operações");
+      return;
+    }
+
+    try {
+      // Find the UUID from our formatted ID (we need to find the actual record)
+      const operationToRemove = stockOperations.find(op => op.id === id);
+      if (!operationToRemove) {
+        toast.error("Operação não encontrada");
+        return;
+      }
+      
+      // We'll find the actual UUID by querying for the operation
+      const { data: dbOperation, error: findError } = await supabase
+        .from("stock_operations")
+        .select()
+        .match({
+          stock_name: operationToRemove.stockName,
+          date: operationToRemove.date,
+          type: operationToRemove.type,
+          entry_price: operationToRemove.entryPrice,
+          exit_price: operationToRemove.exitPrice,
+          quantity: operationToRemove.quantity
+        })
+        .limit(1);
+      
+      if (findError || !dbOperation || dbOperation.length === 0) {
+        console.error("Erro ao encontrar operação para remoção:", findError);
+        toast.error("Erro ao remover operação");
+        return;
+      }
+
+      // Now delete the operation using the actual UUID
+      const { error: deleteError } = await supabase
+        .from("stock_operations")
+        .delete()
+        .eq('id', dbOperation[0].id);
+
+      if (deleteError) {
+        console.error("Erro ao remover operação:", deleteError);
+        toast.error("Erro ao remover operação");
+        return;
+      }
+
+      // Remove the operation from state
+      setStockOperations(prev => prev.filter(op => op.id !== id));
+      toast.success("Operação removida com sucesso");
+    } catch (err) {
+      console.error("Erro ao remover operação:", err);
+      toast.error("Erro ao remover operação");
+    }
+  };
+
+  // Remove forex operation
+  const removeForexOperation = async (id: number) => {
+    if (!user) {
+      toast.error("Você precisa estar logado para remover operações");
+      return;
+    }
+
+    try {
+      // Find the operation in our state
+      const operationToRemove = forexOperations.find(op => op.id === id);
+      if (!operationToRemove) {
+        toast.error("Operação não encontrada");
+        return;
+      }
+      
+      // We'll find the actual UUID by querying for the operation
+      const { data: dbOperation, error: findError } = await supabase
+        .from("forex_operations")
+        .select()
+        .match({
+          currency_pair: operationToRemove.currencyPair,
+          date: operationToRemove.date,
+          type: operationToRemove.type,
+          entry_price: operationToRemove.entryPrice,
+          exit_price: operationToRemove.exitPrice,
+          lot_size: operationToRemove.lotSize
+        })
+        .limit(1);
+      
+      if (findError || !dbOperation || dbOperation.length === 0) {
+        console.error("Erro ao encontrar operação para remoção:", findError);
+        toast.error("Erro ao remover operação");
+        return;
+      }
+
+      // Now delete the operation using the actual UUID
+      const { error: deleteError } = await supabase
+        .from("forex_operations")
+        .delete()
+        .eq('id', dbOperation[0].id);
+
+      if (deleteError) {
+        console.error("Erro ao remover operação:", deleteError);
+        toast.error("Erro ao remover operação");
+        return;
+      }
+
+      // Remove the operation from state
+      setForexOperations(prev => prev.filter(op => op.id !== id));
+      toast.success("Operação removida com sucesso");
+    } catch (err) {
+      console.error("Erro ao remover operação:", err);
+      toast.error("Erro ao remover operação");
+    }
+  };
+
   return (
     <OperationsContext.Provider 
       value={{ 
@@ -281,6 +394,8 @@ export const OperationsProvider = ({ children }: { children: ReactNode }) => {
         forexOperations, 
         addStockOperation, 
         addForexOperation,
+        removeStockOperation,
+        removeForexOperation,
         loading
       }}
     >

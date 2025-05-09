@@ -4,11 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
 import { Chart } from "@/components/ui/chart";
 import { useOperations } from "@/context/OperationsContext";
 import { useAuth } from "@/components/AuthProvider";
+import ForexHistory from "./forex/ForexHistory";
 
 const ForexPanel = () => {
   // Get operations from context
@@ -278,56 +278,7 @@ const ForexPanel = () => {
         </div>
       </div>
       
-      <div className="bg-white rounded-lg shadow-sm p-6 animate-fade-in">
-        <h3 className="text-xl font-semibold text-teal mb-4">Histórico de Operações</h3>
-        
-        {loading ? (
-          <div className="text-center py-8">
-            Carregando histórico...
-          </div>
-        ) : forexOperations.length > 0 ? (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Par</TableHead>
-                  <TableHead>Data</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Preço Entrada</TableHead>
-                  <TableHead>Preço Saída</TableHead>
-                  <TableHead>Lote</TableHead>
-                  <TableHead>Capital</TableHead>
-                  <TableHead>Resultado</TableHead>
-                  <TableHead>ROI</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {forexOperations.map((op) => (
-                  <TableRow key={op.id}>
-                    <TableCell className="font-medium">{op.currencyPair}</TableCell>
-                    <TableCell>{new Date(op.date).toLocaleDateString()}</TableCell>
-                    <TableCell>{op.type}</TableCell>
-                    <TableCell>{op.entryPrice.toFixed(5)}</TableCell>
-                    <TableCell>{op.exitPrice.toFixed(5)}</TableCell>
-                    <TableCell>{op.lotSize.toFixed(2)}</TableCell>
-                    <TableCell>$ {op.initialCapital}</TableCell>
-                    <TableCell className={op.profit && op.profit >= 0 ? 'text-green font-medium' : 'text-red-500 font-medium'}>
-                      $ {op.profit?.toFixed(2)}
-                    </TableCell>
-                    <TableCell className={op.roi && op.roi >= 0 ? 'text-green font-medium' : 'text-red-500 font-medium'}>
-                      {op.roi?.toFixed(2)}%
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        ) : (
-          <div className="text-center py-8 text-gray-500">
-            Nenhuma operação registrada
-          </div>
-        )}
-      </div>
+      <ForexHistory />
     </div>
   );
 };

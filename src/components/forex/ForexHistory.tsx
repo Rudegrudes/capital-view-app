@@ -16,8 +16,8 @@ import {
 import { useOperations } from "@/context/OperationsContext";
 import { useState } from "react";
 
-const StockHistory = () => {
-  const { stockOperations, loading, removeStockOperation } = useOperations();
+const ForexHistory = () => {
+  const { forexOperations, loading, removeForexOperation } = useOperations();
   const [isDeleting, setIsDeleting] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
@@ -25,7 +25,7 @@ const StockHistory = () => {
     setIsDeleting(true);
     setDeletingId(id);
     try {
-      await removeStockOperation(id);
+      await removeForexOperation(id);
     } finally {
       setIsDeleting(false);
       setDeletingId(null);
@@ -47,32 +47,38 @@ const StockHistory = () => {
     <div className="bg-white rounded-lg shadow-sm p-6 animate-fade-in">
       <h3 className="text-xl font-semibold text-teal mb-4">Histórico de Operações</h3>
       
-      {stockOperations.length > 0 ? (
+      {forexOperations.length > 0 ? (
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Ação</TableHead>
+                <TableHead>Par</TableHead>
                 <TableHead>Data</TableHead>
                 <TableHead>Tipo</TableHead>
                 <TableHead>Preço Entrada</TableHead>
                 <TableHead>Preço Saída</TableHead>
-                <TableHead>Quantidade</TableHead>
+                <TableHead>Lote</TableHead>
+                <TableHead>Capital</TableHead>
                 <TableHead>Resultado</TableHead>
+                <TableHead>ROI</TableHead>
                 <TableHead>Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {stockOperations.map((op) => (
+              {forexOperations.map((op) => (
                 <TableRow key={op.id}>
-                  <TableCell className="font-medium">{op.stockName}</TableCell>
+                  <TableCell className="font-medium">{op.currencyPair}</TableCell>
                   <TableCell>{new Date(op.date).toLocaleDateString()}</TableCell>
                   <TableCell>{op.type}</TableCell>
-                  <TableCell>R$ {op.entryPrice.toFixed(2)}</TableCell>
-                  <TableCell>R$ {op.exitPrice.toFixed(2)}</TableCell>
-                  <TableCell>{op.quantity}</TableCell>
+                  <TableCell>{op.entryPrice.toFixed(5)}</TableCell>
+                  <TableCell>{op.exitPrice.toFixed(5)}</TableCell>
+                  <TableCell>{op.lotSize.toFixed(2)}</TableCell>
+                  <TableCell>$ {op.initialCapital}</TableCell>
                   <TableCell className={op.profit && op.profit >= 0 ? 'text-green font-medium' : 'text-red-500 font-medium'}>
-                    R$ {op.profit?.toFixed(2)}
+                    $ {op.profit?.toFixed(2)}
+                  </TableCell>
+                  <TableCell className={op.roi && op.roi >= 0 ? 'text-green font-medium' : 'text-red-500 font-medium'}>
+                    {op.roi?.toFixed(2)}%
                   </TableCell>
                   <TableCell>
                     <AlertDialog>
@@ -90,7 +96,7 @@ const StockHistory = () => {
                         <AlertDialogHeader>
                           <AlertDialogTitle>Remover operação</AlertDialogTitle>
                           <AlertDialogDescription>
-                            Deseja remover a operação {op.stockName}? Esta ação não pode ser desfeita.
+                            Deseja remover a operação {op.currencyPair}? Esta ação não pode ser desfeita.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
@@ -120,4 +126,4 @@ const StockHistory = () => {
   );
 };
 
-export default StockHistory;
+export default ForexHistory;
