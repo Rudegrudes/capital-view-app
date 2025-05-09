@@ -9,6 +9,51 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      forex_operations: {
+        Row: {
+          created_at: string
+          currency_pair: string
+          date: string
+          entry_price: number
+          exit_price: number
+          id: string
+          initial_capital: number
+          lot_size: number
+          profit: number
+          roi: number
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          currency_pair: string
+          date: string
+          entry_price: number
+          exit_price: number
+          id?: string
+          initial_capital: number
+          lot_size: number
+          profit: number
+          roi: number
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          currency_pair?: string
+          date?: string
+          entry_price?: number
+          exit_price?: number
+          id?: string
+          initial_capital?: number
+          lot_size?: number
+          profit?: number
+          roi?: number
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -27,6 +72,45 @@ export type Database = {
           id?: string
           nome?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      stock_operations: {
+        Row: {
+          created_at: string
+          date: string
+          entry_price: number
+          exit_price: number
+          id: string
+          profit: number
+          quantity: number
+          stock_name: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          entry_price: number
+          exit_price: number
+          id?: string
+          profit: number
+          quantity: number
+          stock_name: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          entry_price?: number
+          exit_price?: number
+          id?: string
+          profit?: number
+          quantity?: number
+          stock_name?: string
+          type?: string
+          user_id?: string
         }
         Relationships: []
       }

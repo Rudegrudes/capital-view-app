@@ -6,9 +6,11 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useOperations } from "@/context/OperationsContext";
+import { useAuth } from "@/components/AuthProvider";
 
 const StockForm = () => {
   const { addStockOperation } = useOperations();
+  const { user } = useAuth();
   
   // Form state
   const [stockName, setStockName] = useState("");
@@ -17,33 +19,48 @@ const StockForm = () => {
   const [entryPrice, setEntryPrice] = useState("");
   const [exitPrice, setExitPrice] = useState("");
   const [quantity, setQuantity] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleAddOperation = () => {
+  const handleAddOperation = async () => {
+    if (!user) {
+      toast.error("Você precisa estar logado para adicionar operações");
+      return;
+    }
+
     if (!stockName || !date || !entryPrice || !exitPrice || !quantity) {
       toast.error("Por favor, preencha todos os campos");
       return;
     }
 
-    const newOperation = {
-      stockName,
-      date,
-      type,
-      entryPrice: parseFloat(entryPrice),
-      exitPrice: parseFloat(exitPrice),
-      quantity: parseInt(quantity),
-    };
+    setIsSubmitting(true);
 
-    // Add operation using context function
-    addStockOperation(newOperation);
-    toast.success("Operação adicionada com sucesso!");
+    try {
+      const newOperation = {
+        stockName,
+        date,
+        type,
+        entryPrice: parseFloat(entryPrice),
+        exitPrice: parseFloat(exitPrice),
+        quantity: parseInt(quantity),
+      };
 
-    // Reset form
-    setStockName("");
-    setDate("");
-    setType("Compra");
-    setEntryPrice("");
-    setExitPrice("");
-    setQuantity("");
+      // Add operation using context function
+      await addStockOperation(newOperation);
+      toast.success("Operação adicionada com sucesso!");
+
+      // Reset form
+      setStockName("");
+      setDate("");
+      setType("Compra");
+      setEntryPrice("");
+      setExitPrice("");
+      setQuantity("");
+    } catch (error) {
+      console.error("Erro ao adicionar operação:", error);
+      toast.error("Erro ao adicionar operação");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -123,9 +140,16 @@ const StockForm = () => {
       <Button 
         className="w-full mt-6 bg-green hover:bg-opacity-90 hover-effect"
         onClick={handleAddOperation}
+        disabled={isSubmitting || !user}
       >
-        Adicionar Operação
+        {isSubmitting ? "Adicionando..." : "Adicionar Operação"}
       </Button>
+      
+      {!user && (
+        <p className="mt-2 text-center text-red-500 text-sm">
+          Você precisa estar logado para adicionar operações
+        </p>
+      )}
     </div>
   );
 };

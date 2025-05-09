@@ -3,7 +3,18 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useOperations } from "@/context/OperationsContext";
 
 const StockHistory = () => {
-  const { stockOperations } = useOperations();
+  const { stockOperations, loading } = useOperations();
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm p-6 animate-fade-in">
+        <h3 className="text-xl font-semibold text-teal mb-4">Histórico de Operações</h3>
+        <div className="text-center py-8">
+          Carregando histórico...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-lg shadow-sm p-6 animate-fade-in">

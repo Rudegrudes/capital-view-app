@@ -3,7 +3,7 @@ import { Chart } from "@/components/ui/chart";
 import { useOperations } from "@/context/OperationsContext";
 
 const StockChart = () => {
-  const { stockOperations } = useOperations();
+  const { stockOperations, loading } = useOperations();
   const totalProfit = stockOperations.reduce((acc, op) => acc + (op.profit || 0), 0);
   
   // Generate chart data from operations
@@ -31,6 +31,17 @@ const StockChart = () => {
     },
     colors: ['#2A9D8F']
   };
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm p-6">
+        <h3 className="text-xl font-semibold text-teal mb-4">Lucro Acumulado</h3>
+        <div className="flex items-center justify-center h-[300px]">
+          Carregando gráfico...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-lg shadow-sm p-6">

@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,23 +8,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { toast } from "sonner";
 import { Chart } from "@/components/ui/chart";
 import { useOperations } from "@/context/OperationsContext";
-
-type ForexOperation = {
-  id: number;
-  currencyPair: string;
-  date: string;
-  type: "Buy" | "Sell";
-  entryPrice: number;
-  exitPrice: number;
-  lotSize: number;
-  initialCapital: number;
-  profit?: number;
-  roi?: number;
-};
+import { useAuth } from "@/components/AuthProvider";
 
 const ForexPanel = () => {
   // Get operations from context
-  const { forexOperations, addForexOperation } = useOperations();
+  const { forexOperations, addForexOperation, loading } = useOperations();
+  const { user } = useAuth();
   
   // Form state
   const [currencyPair, setCurrencyPair] = useState("");
@@ -33,34 +23,58 @@ const ForexPanel = () => {
   const [exitPrice, setExitPrice] = useState("");
   const [lotSize, setLotSize] = useState("");
   const [initialCapital, setInitialCapital] = useState("30");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleAddOperation = () => {
+  useEffect(() => {
+    if (!user) {
+      toast.warning("Faça login para salvar suas operações", {
+        duration: 5000,
+        id: "login-required-forex"
+      });
+    }
+  }, [user]);
+
+  const handleAddOperation = async () => {
+    if (!user) {
+      toast.error("Você precisa estar logado para adicionar operações");
+      return;
+    }
+
     if (!currencyPair || !date || !entryPrice || !exitPrice || !lotSize || !initialCapital) {
       toast.error("Por favor, preencha todos os campos");
       return;
     }
 
-    const newOperation = {
-      currencyPair,
-      date,
-      type,
-      entryPrice: parseFloat(entryPrice),
-      exitPrice: parseFloat(exitPrice),
-      lotSize: parseFloat(lotSize),
-      initialCapital: parseFloat(initialCapital),
-    };
+    setIsSubmitting(true);
 
-    // Add operation using context function
-    addForexOperation(newOperation);
-    toast.success("Operação adicionada com sucesso!");
+    try {
+      const newOperation = {
+        currencyPair,
+        date,
+        type,
+        entryPrice: parseFloat(entryPrice),
+        exitPrice: parseFloat(exitPrice),
+        lotSize: parseFloat(lotSize),
+        initialCapital: parseFloat(initialCapital),
+      };
 
-    // Reset form
-    setCurrencyPair("");
-    setDate("");
-    setType("Buy");
-    setEntryPrice("");
-    setExitPrice("");
-    setLotSize("");
+      // Add operation using context function
+      await addForexOperation(newOperation);
+      toast.success("Operação adicionada com sucesso!");
+
+      // Reset form
+      setCurrencyPair("");
+      setDate("");
+      setType("Buy");
+      setEntryPrice("");
+      setExitPrice("");
+      setLotSize("");
+    } catch (error) {
+      console.error("Erro ao adicionar operação:", error);
+      toast.error("Erro ao adicionar operação");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const totalProfit = forexOperations.reduce((acc, op) => acc + (op.profit || 0), 0);
@@ -198,14 +212,25 @@ const ForexPanel = () => {
           <Button 
             className="w-full mt-6 bg-green hover:bg-opacity-90 hover-effect"
             onClick={handleAddOperation}
+            disabled={isSubmitting || !user}
           >
-            Adicionar Operação
+            {isSubmitting ? "Adicionando..." : "Adicionar Operação"}
           </Button>
+          
+          {!user && (
+            <p className="mt-2 text-center text-red-500 text-sm">
+              Você precisa estar logado para adicionar operações
+            </p>
+          )}
         </div>
         
         <div className="bg-white rounded-lg shadow-sm p-6">
           <h3 className="text-xl font-semibold text-teal mb-4">Desempenho</h3>
-          {forexOperations.length > 0 ? (
+          {loading ? (
+            <div className="flex items-center justify-center h-[300px]">
+              Carregando gráficos...
+            </div>
+          ) : forexOperations.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="h-[300px]">
                 <Chart 
@@ -256,7 +281,11 @@ const ForexPanel = () => {
       <div className="bg-white rounded-lg shadow-sm p-6 animate-fade-in">
         <h3 className="text-xl font-semibold text-teal mb-4">Histórico de Operações</h3>
         
-        {forexOperations.length > 0 ? (
+        {loading ? (
+          <div className="text-center py-8">
+            Carregando histórico...
+          </div>
+        ) : forexOperations.length > 0 ? (
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>

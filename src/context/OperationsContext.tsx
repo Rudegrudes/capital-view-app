@@ -1,5 +1,8 @@
 
-import React, { createContext, useContext, useState, ReactNode } from "react";
+import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/components/AuthProvider";
+import { toast } from "sonner";
 
 // Define types for stock operations
 export type StockOperation = {
@@ -30,8 +33,9 @@ export type ForexOperation = {
 type OperationsContextType = {
   stockOperations: StockOperation[];
   forexOperations: ForexOperation[];
-  addStockOperation: (operation: Omit<StockOperation, "id" | "profit">) => void;
-  addForexOperation: (operation: Omit<ForexOperation, "id" | "profit" | "roi">) => void;
+  addStockOperation: (operation: Omit<StockOperation, "id" | "profit">) => Promise<void>;
+  addForexOperation: (operation: Omit<ForexOperation, "id" | "profit" | "roi">) => Promise<void>;
+  loading: boolean;
 };
 
 const OperationsContext = createContext<OperationsContextType | undefined>(undefined);
@@ -47,6 +51,90 @@ export const useOperations = () => {
 export const OperationsProvider = ({ children }: { children: ReactNode }) => {
   const [stockOperations, setStockOperations] = useState<StockOperation[]>([]);
   const [forexOperations, setForexOperations] = useState<ForexOperation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+
+  // Fetch operations when user is authenticated
+  useEffect(() => {
+    if (user) {
+      fetchStockOperations();
+      fetchForexOperations();
+    } else {
+      setStockOperations([]);
+      setForexOperations([]);
+      setLoading(false);
+    }
+  }, [user]);
+
+  // Fetch stock operations from Supabase
+  const fetchStockOperations = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("stock_operations")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("Erro ao buscar operações de ações:", error);
+        toast.error("Erro ao carregar operações de ações");
+      } else {
+        // Transform Supabase data to match our app's format
+        const formattedData = data.map(op => ({
+          id: Number(op.id.replace(/-/g, "").substring(0, 8), 16),  // Convert UUID to number ID for compatibility
+          stockName: op.stock_name,
+          date: op.date,
+          type: op.type as "Compra" | "Venda",
+          entryPrice: Number(op.entry_price),
+          exitPrice: Number(op.exit_price),
+          quantity: op.quantity,
+          profit: Number(op.profit)
+        }));
+        setStockOperations(formattedData);
+      }
+    } catch (err) {
+      console.error("Erro ao buscar operações de ações:", err);
+      toast.error("Erro ao carregar operações de ações");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch forex operations from Supabase
+  const fetchForexOperations = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("forex_operations")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("Erro ao buscar operações de forex:", error);
+        toast.error("Erro ao carregar operações de forex");
+      } else {
+        // Transform Supabase data to match our app's format
+        const formattedData = data.map(op => ({
+          id: Number(op.id.replace(/-/g, "").substring(0, 8), 16),  // Convert UUID to number ID for compatibility
+          currencyPair: op.currency_pair,
+          date: op.date,
+          type: op.type as "Buy" | "Sell",
+          entryPrice: Number(op.entry_price),
+          exitPrice: Number(op.exit_price),
+          lotSize: Number(op.lot_size),
+          initialCapital: Number(op.initial_capital),
+          profit: Number(op.profit),
+          roi: Number(op.roi)
+        }));
+        setForexOperations(formattedData);
+      }
+    } catch (err) {
+      console.error("Erro ao buscar operações de forex:", err);
+      toast.error("Erro ao carregar operações de forex");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Calculate profit for stock operations
   const calculateStockProfit = (operation: Omit<StockOperation, "id" | "profit">) => {
@@ -79,19 +167,111 @@ export const OperationsProvider = ({ children }: { children: ReactNode }) => {
     return profitValue;
   };
 
-  // Add stock operation
-  const addStockOperation = (operation: Omit<StockOperation, "id" | "profit">) => {
-    const profit = calculateStockProfit(operation);
-    const newOperation = { ...operation, id: Date.now(), profit };
-    setStockOperations([...stockOperations, newOperation]);
+  // Add stock operation to Supabase
+  const addStockOperation = async (operation: Omit<StockOperation, "id" | "profit">) => {
+    if (!user) {
+      toast.error("Você precisa estar logado para adicionar operações");
+      return;
+    }
+
+    try {
+      const profit = calculateStockProfit(operation);
+      
+      // Insert operation into Supabase
+      const { data, error } = await supabase
+        .from("stock_operations")
+        .insert({
+          user_id: user.id,
+          stock_name: operation.stockName,
+          date: operation.date,
+          type: operation.type,
+          entry_price: operation.entryPrice,
+          exit_price: operation.exitPrice,
+          quantity: operation.quantity,
+          profit: profit
+        })
+        .select();
+
+      if (error) {
+        console.error("Erro ao adicionar operação de ação:", error);
+        toast.error("Erro ao salvar operação");
+        return;
+      }
+
+      // Add the new operation to state with a formatted ID
+      if (data && data[0]) {
+        const newOp = {
+          id: Number(data[0].id.replace(/-/g, "").substring(0, 8), 16),
+          stockName: operation.stockName,
+          date: operation.date,
+          type: operation.type,
+          entryPrice: operation.entryPrice,
+          exitPrice: operation.exitPrice,
+          quantity: operation.quantity,
+          profit: profit
+        };
+        setStockOperations(prev => [newOp, ...prev]);
+      }
+    } catch (err) {
+      console.error("Erro ao adicionar operação de ação:", err);
+      toast.error("Erro ao salvar operação");
+    }
   };
 
-  // Add forex operation
-  const addForexOperation = (operation: Omit<ForexOperation, "id" | "profit" | "roi">) => {
-    const profit = calculateForexProfit(operation);
-    const roi = (profit / operation.initialCapital) * 100;
-    const newOperation = { ...operation, id: Date.now(), profit, roi };
-    setForexOperations([...forexOperations, newOperation]);
+  // Add forex operation to Supabase
+  const addForexOperation = async (operation: Omit<ForexOperation, "id" | "profit" | "roi">) => {
+    if (!user) {
+      toast.error("Você precisa estar logado para adicionar operações");
+      return;
+    }
+
+    try {
+      const profit = calculateForexProfit(operation);
+      const roi = (profit / operation.initialCapital) * 100;
+      
+      // Insert operation into Supabase
+      const { data, error } = await supabase
+        .from("forex_operations")
+        .insert({
+          user_id: user.id,
+          currency_pair: operation.currencyPair,
+          date: operation.date,
+          type: operation.type,
+          entry_price: operation.entryPrice,
+          exit_price: operation.exitPrice,
+          lot_size: operation.lotSize,
+          initial_capital: operation.initialCapital,
+          profit: profit,
+          roi: roi
+        })
+        .select();
+
+      if (error) {
+        console.error("Erro ao adicionar operação de forex:", error);
+        toast.error("Erro ao salvar operação");
+        return;
+      }
+
+      // Add the new operation to state with a formatted ID
+      if (data && data[0]) {
+        const newOp = {
+          id: Number(data[0].id.replace(/-/g, "").substring(0, 8), 16),
+          currencyPair: operation.currencyPair,
+          date: operation.date,
+          type: operation.type,
+          entryPrice: operation.entryPrice,
+          exitPrice: operation.exitPrice,
+          lotSize: operation.lotSize,
+          initialCapital: operation.initialCapital,
+          profit: profit,
+          roi: roi
+        };
+        setForexOperations(prev => [newOp, ...prev]);
+      }
+    } catch (err) {
+      console.error("Erro ao adicionar operação de forex:", err);
+      toast.error("Erro ao salvar operação");
+    }
   };
 
   return (
@@ -100,7 +280,8 @@ export const OperationsProvider = ({ children }: { children: ReactNode }) => {
         stockOperations, 
         forexOperations, 
         addStockOperation, 
-        addForexOperation 
+        addForexOperation,
+        loading
       }}
     >
       {children}
