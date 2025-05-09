@@ -190,7 +190,7 @@ export const OperationsProvider = ({ children }: { children: ReactNode }) => {
           quantity: operation.quantity,
           profit: profit
         })
-        .select();  // Fixed: No second argument
+        .select();
 
       if (error) {
         console.error("Erro ao adicionar operação de ação:", error);
@@ -244,7 +244,7 @@ export const OperationsProvider = ({ children }: { children: ReactNode }) => {
           profit: profit,
           roi: roi
         })
-        .select();  // Fixed: No second argument
+        .select();
 
       if (error) {
         console.error("Erro ao adicionar operação de forex:", error);
