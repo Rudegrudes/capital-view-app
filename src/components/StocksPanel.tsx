@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,7 +5,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
-import { Chart, LineChart } from "@/components/ui/chart";
+import { Chart } from "@/components/ui/chart";
+import { useOperations } from "@/context/OperationsContext";
 
 type StockOperation = {
   id: number;
@@ -20,27 +20,16 @@ type StockOperation = {
 };
 
 const StocksPanel = () => {
-  const [operations, setOperations] = useState<StockOperation[]>([]);
+  // Get operations from context
+  const { stockOperations, addStockOperation } = useOperations();
+  
+  // Form state
   const [stockName, setStockName] = useState("");
   const [date, setDate] = useState("");
   const [type, setType] = useState<"Compra" | "Venda">("Compra");
   const [entryPrice, setEntryPrice] = useState("");
   const [exitPrice, setExitPrice] = useState("");
   const [quantity, setQuantity] = useState("");
-
-  const calculateProfit = (operation: Omit<StockOperation, "id" | "profit">) => {
-    // Corrigindo o cálculo de lucro para ações
-    const entryValue = operation.entryPrice * operation.quantity;
-    const exitValue = operation.exitPrice * operation.quantity;
-    
-    if (operation.type === "Compra") {
-      // Na compra: lucro quando preço saída > preço entrada
-      return exitValue - entryValue;
-    } else {
-      // Na venda: lucro quando preço entrada > preço saída
-      return entryValue - exitValue;
-    }
-  };
 
   const handleAddOperation = () => {
     if (!stockName || !date || !entryPrice || !exitPrice || !quantity) {
@@ -49,7 +38,6 @@ const StocksPanel = () => {
     }
 
     const newOperation = {
-      id: Date.now(),
       stockName,
       date,
       type,
@@ -58,10 +46,8 @@ const StocksPanel = () => {
       quantity: parseInt(quantity),
     };
 
-    const profit = calculateProfit(newOperation);
-    const operationWithProfit = { ...newOperation, profit };
-
-    setOperations([...operations, operationWithProfit]);
+    // Add operation using context function
+    addStockOperation(newOperation);
     toast.success("Operação adicionada com sucesso!");
 
     // Reset form
@@ -73,12 +59,12 @@ const StocksPanel = () => {
     setQuantity("");
   };
 
-  const totalProfit = operations.reduce((acc, op) => acc + (op.profit || 0), 0);
+  const totalProfit = stockOperations.reduce((acc, op) => acc + (op.profit || 0), 0);
   
   // Generate chart data from operations
-  const chartData = operations.map((operation, index) => {
+  const chartData = stockOperations.map((operation, index) => {
     // For each operation, calculate the accumulated profit up to this point
-    const accumulated = operations
+    const accumulated = stockOperations
       .slice(0, index + 1)
       .reduce((acc, op) => acc + (op.profit || 0), 0);
       
@@ -189,7 +175,7 @@ const StocksPanel = () => {
         
         <div className="bg-white rounded-lg shadow-sm p-6">
           <h3 className="text-xl font-semibold text-teal mb-4">Lucro Acumulado</h3>
-          {operations.length > 0 ? (
+          {stockOperations.length > 0 ? (
             <div className="h-[300px]">
               <Chart 
                 type="area"
@@ -217,7 +203,7 @@ const StocksPanel = () => {
       <div className="bg-white rounded-lg shadow-sm p-6 animate-fade-in">
         <h3 className="text-xl font-semibold text-teal mb-4">Histórico de Operações</h3>
         
-        {operations.length > 0 ? (
+        {stockOperations.length > 0 ? (
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -232,7 +218,7 @@ const StocksPanel = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {operations.map((op) => (
+                {stockOperations.map((op) => (
                   <TableRow key={op.id}>
                     <TableCell className="font-medium">{op.stockName}</TableCell>
                     <TableCell>{new Date(op.date).toLocaleDateString()}</TableCell>

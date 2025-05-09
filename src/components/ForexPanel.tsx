@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
 import { Chart } from "@/components/ui/chart";
+import { useOperations } from "@/context/OperationsContext";
 
 type ForexOperation = {
   id: number;
@@ -21,7 +22,10 @@ type ForexOperation = {
 };
 
 const ForexPanel = () => {
-  const [operations, setOperations] = useState<ForexOperation[]>([]);
+  // Get operations from context
+  const { forexOperations, addForexOperation } = useOperations();
+  
+  // Form state
   const [currencyPair, setCurrencyPair] = useState("");
   const [date, setDate] = useState("");
   const [type, setType] = useState<"Buy" | "Sell">("Buy");
@@ -30,27 +34,6 @@ const ForexPanel = () => {
   const [lotSize, setLotSize] = useState("");
   const [initialCapital, setInitialCapital] = useState("30");
 
-  const calculateProfit = (operation: Omit<ForexOperation, "id" | "profit" | "roi">) => {
-    // Corrigindo o cálculo de profit para Forex
-    // Para pares de moedas, o cálculo é baseado na diferença de pontos * tamanho do lote * valor do pip
-    
-    // Calculando a diferença de pontos (considerando 5 casas decimais como padrão para forex)
-    const priceDiff = operation.exitPrice - operation.entryPrice;
-    
-    // Determinar se é lucro ou prejuízo baseado no tipo de operação
-    let profitValue;
-    
-    if (operation.type === "Buy") {
-      // Se for compra (Buy), lucro quando preço saída > preço entrada
-      profitValue = priceDiff * operation.lotSize * 100000;
-    } else {
-      // Se for venda (Sell), lucro quando preço entrada > preço saída
-      profitValue = -priceDiff * operation.lotSize * 100000;
-    }
-    
-    return profitValue;
-  };
-
   const handleAddOperation = () => {
     if (!currencyPair || !date || !entryPrice || !exitPrice || !lotSize || !initialCapital) {
       toast.error("Por favor, preencha todos os campos");
@@ -58,7 +41,6 @@ const ForexPanel = () => {
     }
 
     const newOperation = {
-      id: Date.now(),
       currencyPair,
       date,
       type,
@@ -68,11 +50,8 @@ const ForexPanel = () => {
       initialCapital: parseFloat(initialCapital),
     };
 
-    const profit = calculateProfit(newOperation);
-    const roi = (profit / newOperation.initialCapital) * 100;
-    const operationWithResults = { ...newOperation, profit, roi };
-
-    setOperations([...operations, operationWithResults]);
+    // Add operation using context function
+    addForexOperation(newOperation);
     toast.success("Operação adicionada com sucesso!");
 
     // Reset form
@@ -84,14 +63,14 @@ const ForexPanel = () => {
     setLotSize("");
   };
 
-  const totalProfit = operations.reduce((acc, op) => acc + (op.profit || 0), 0);
-  const averageROI = operations.length > 0 
-    ? operations.reduce((acc, op) => acc + (op.roi || 0), 0) / operations.length
+  const totalProfit = forexOperations.reduce((acc, op) => acc + (op.profit || 0), 0);
+  const averageROI = forexOperations.length > 0 
+    ? forexOperations.reduce((acc, op) => acc + (op.roi || 0), 0) / forexOperations.length
     : 0;
   
   // Prepare pie chart data for win/loss ratio
-  const winCount = operations.filter(op => (op.profit || 0) > 0).length;
-  const lossCount = operations.filter(op => (op.profit || 0) <= 0).length;
+  const winCount = forexOperations.filter(op => (op.profit || 0) > 0).length;
+  const lossCount = forexOperations.filter(op => (op.profit || 0) <= 0).length;
   const pieChartSeries = [{
     name: 'Trading Results',
     data: [winCount, lossCount]
@@ -103,9 +82,9 @@ const ForexPanel = () => {
   };
 
   // Prepare line chart data for performance over time
-  const lineChartData = operations.map((op, index) => {
+  const lineChartData = forexOperations.map((op, index) => {
     const previousProfit = index > 0 
-      ? operations.slice(0, index).reduce((acc, prevOp) => acc + (prevOp.profit || 0), 0) 
+      ? forexOperations.slice(0, index).reduce((acc, prevOp) => acc + (prevOp.profit || 0), 0) 
       : 0;
     return {
       name: `Op ${index + 1} (${op.currencyPair})`,
@@ -226,7 +205,7 @@ const ForexPanel = () => {
         
         <div className="bg-white rounded-lg shadow-sm p-6">
           <h3 className="text-xl font-semibold text-teal mb-4">Desempenho</h3>
-          {operations.length > 0 ? (
+          {forexOperations.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="h-[300px]">
                 <Chart 
@@ -267,7 +246,7 @@ const ForexPanel = () => {
             <div className="text-center">
               <span className="block text-sm font-medium">Win Rate</span>
               <span className="text-xl font-bold text-teal">
-                {operations.length ? ((winCount / operations.length) * 100).toFixed(0) : 0}%
+                {forexOperations.length ? ((winCount / forexOperations.length) * 100).toFixed(0) : 0}%
               </span>
             </div>
           </div>
@@ -277,7 +256,7 @@ const ForexPanel = () => {
       <div className="bg-white rounded-lg shadow-sm p-6 animate-fade-in">
         <h3 className="text-xl font-semibold text-teal mb-4">Histórico de Operações</h3>
         
-        {operations.length > 0 ? (
+        {forexOperations.length > 0 ? (
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -294,7 +273,7 @@ const ForexPanel = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {operations.map((op) => (
+                {forexOperations.map((op) => (
                   <TableRow key={op.id}>
                     <TableCell className="font-medium">{op.currencyPair}</TableCell>
                     <TableCell>{new Date(op.date).toLocaleDateString()}</TableCell>
