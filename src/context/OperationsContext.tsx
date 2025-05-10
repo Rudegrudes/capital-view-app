@@ -4,13 +4,14 @@ import { useAuth } from "@/components/AuthProvider";
 import { useStockOperations } from "@/hooks/useStockOperations";
 import { useForexOperations } from "@/hooks/useForexOperations";
 import type { StockOperation } from "@/hooks/useStockOperations";
-import type { ForexOperation } from "@/hooks/useForexOperations";
+import type { ForexOperation } from "@/types/forex";
+import type { NewForexOperation } from "@/types/forex";
 
 type OperationsContextType = {
   stockOperations: StockOperation[];
   forexOperations: ForexOperation[];
   addStockOperation: (operation: Omit<StockOperation, "id" | "profit">) => Promise<void>;
-  addForexOperation: (operation: Omit<ForexOperation, "id" | "profit" | "roi">) => Promise<void>;
+  addForexOperation: (operation: NewForexOperation) => Promise<void>;
   removeStockOperation: (id: number) => Promise<void>;
   removeForexOperation: (id: number) => Promise<void>;
   loading: boolean;
