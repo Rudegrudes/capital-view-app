@@ -83,7 +83,7 @@ export const useStockOperations = (user: User | null) => {
           quantity: operation.quantity,
           profit: profit
         })
-        .select();  // Corrected: removed extra arguments
+        .select();
 
       if (error) {
         console.error("Erro ao adicionar operação de ação:", error);

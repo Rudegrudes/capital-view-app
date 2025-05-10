@@ -90,7 +90,7 @@ export const useForexOperations = (user: User | null) => {
           profit: profit,
           roi: roi
         })
-        .select(); // Corrected: removed extra arguments
+        .select();
 
       if (error) {
         console.error("Erro ao adicionar operação de forex:", error);
