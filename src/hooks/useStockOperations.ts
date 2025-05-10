@@ -127,22 +127,32 @@ export const useStockOperations = (user: User | null) => {
         return;
       }
       
-      // First get all operations that match our criteria to find the UUID
-      const { data: matchingOperations, error: findError } = await supabase
+      // Get all operations from the database
+      const { data: allOperations, error: fetchError } = await supabase
         .from("stock_operations")
-        .select()
-        .match({
-          stock_name: operationToRemove.stockName,
-          date: operationToRemove.date,
-          type: operationToRemove.type,
-          entry_price: operationToRemove.entryPrice,
-          exit_price: operationToRemove.exitPrice,
-          quantity: operationToRemove.quantity
-        });
+        .select();
       
-      if (findError || !matchingOperations || matchingOperations.length === 0) {
-        console.error("Erro ao encontrar operação para remoção:", findError);
+      if (fetchError || !allOperations) {
+        console.error("Erro ao buscar operações:", fetchError);
         toast.error("Erro ao remover operação");
+        return;
+      }
+
+      console.log("Todas as operações no banco:", allOperations);
+      
+      // Find matching operations by comparing properties
+      const matchingOperations = allOperations.filter(dbOp => 
+        dbOp.stock_name === operationToRemove.stockName &&
+        dbOp.date === operationToRemove.date &&
+        dbOp.type === operationToRemove.type &&
+        Number(dbOp.entry_price) === operationToRemove.entryPrice &&
+        Number(dbOp.exit_price) === operationToRemove.exitPrice &&
+        dbOp.quantity === operationToRemove.quantity
+      );
+      
+      if (matchingOperations.length === 0) {
+        console.error("Operação não encontrada no banco de dados");
+        toast.error("Operação não encontrada no banco de dados");
         return;
       }
 
