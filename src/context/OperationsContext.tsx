@@ -74,7 +74,7 @@ export const OperationsProvider = ({ children }: { children: ReactNode }) => {
       setLoading(true);
       const { data, error } = await supabase
         .from("stock_operations")
-        .select() // Fixed: Removed extra argument here
+        .select()
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -108,7 +108,7 @@ export const OperationsProvider = ({ children }: { children: ReactNode }) => {
       setLoading(true);
       const { data, error } = await supabase
         .from("forex_operations")
-        .select() // Fixed: Removed extra argument here
+        .select()
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -192,7 +192,7 @@ export const OperationsProvider = ({ children }: { children: ReactNode }) => {
           quantity: operation.quantity,
           profit: profit
         })
-        .select(); // Fixed: Removed extra argument here
+        .select();
 
       if (error) {
         console.error("Erro ao adicionar operação de ação:", error);
@@ -246,7 +246,7 @@ export const OperationsProvider = ({ children }: { children: ReactNode }) => {
           profit: profit,
           roi: roi
         })
-        .select(); // Fixed: Removed extra argument here
+        .select();
 
       if (error) {
         console.error("Erro ao adicionar operação de forex:", error);
