@@ -1,114 +1,42 @@
 
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import { calculateStockProfit } from "@/utils/operationCalculations";
 import { User } from "@supabase/supabase-js";
-
-// Define types for stock operations
-export type StockOperation = {
-  id: number;
-  stockName: string;
-  date: string;
-  type: "Compra" | "Venda";
-  entryPrice: number;
-  exitPrice: number;
-  quantity: number;
-  profit?: number;
-};
+import type { StockOperation, NewStockOperation } from "@/types/stock";
+import { fetchStockOperations, addStockOperation as addOperation, removeStockOperation as removeOperation } from "@/services/stockService";
 
 export const useStockOperations = (user: User | null) => {
   const [stockOperations, setStockOperations] = useState<StockOperation[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch stock operations from Supabase
-  const fetchStockOperations = async () => {
+  // Load stock operations
+  const loadStockOperations = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from("stock_operations")
-        .select()
-        .order("created_at", { ascending: false });
-
-      if (error) {
-        console.error("Erro ao buscar operações de ações:", error);
-        toast.error("Erro ao carregar operações de ações");
-      } else {
-        // Transform Supabase data to match our app's format
-        const formattedData = data.map(op => ({
-          id: Number(op.id.replace(/-/g, "").substring(0, 8), 16),  // Convert UUID to number ID for compatibility
-          stockName: op.stock_name,
-          date: op.date,
-          type: op.type as "Compra" | "Venda",
-          entryPrice: Number(op.entry_price),
-          exitPrice: Number(op.exit_price),
-          quantity: op.quantity,
-          profit: Number(op.profit)
-        }));
-        setStockOperations(formattedData);
-      }
-    } catch (err) {
-      console.error("Erro ao buscar operações de ações:", err);
-      toast.error("Erro ao carregar operações de ações");
+      const operations = await fetchStockOperations();
+      setStockOperations(operations);
     } finally {
       setLoading(false);
     }
   };
 
-  // Add stock operation to Supabase
-  const addStockOperation = async (operation: Omit<StockOperation, "id" | "profit">) => {
+  // Add stock operation
+  const addStockOperation = async (operation: NewStockOperation) => {
     if (!user) {
       toast.error("Você precisa estar logado para adicionar operações");
       return;
     }
 
     try {
-      const profit = calculateStockProfit(
-        operation.entryPrice, 
-        operation.exitPrice, 
-        operation.quantity, 
-        operation.type
-      );
-      
-      // Insert operation into Supabase
-      const { data, error } = await supabase
-        .from("stock_operations")
-        .insert({
-          user_id: user.id,
-          stock_name: operation.stockName,
-          date: operation.date,
-          type: operation.type,
-          entry_price: operation.entryPrice,
-          exit_price: operation.exitPrice,
-          quantity: operation.quantity,
-          profit: profit
-        })
-        .select();
-
-      if (error) {
-        console.error("Erro ao adicionar operação de ação:", error);
-        toast.error("Erro ao salvar operação");
-        return;
-      }
-
-      // Add the new operation to state with a formatted ID
-      if (data && data[0]) {
-        const newOp = {
-          id: Number(data[0].id.replace(/-/g, "").substring(0, 8), 16),
-          stockName: operation.stockName,
-          date: operation.date,
-          type: operation.type,
-          entryPrice: operation.entryPrice,
-          exitPrice: operation.exitPrice,
-          quantity: operation.quantity,
-          profit: profit
-        };
-        setStockOperations(prev => [newOp, ...prev]);
-        toast.success("Operação adicionada com sucesso!");
-      }
+      const newOperation = await addOperation(operation, user);
+      setStockOperations(prev => [newOperation, ...prev]);
+      toast.success("Operação adicionada com sucesso!");
     } catch (err) {
-      console.error("Erro ao adicionar operação de ação:", err);
-      toast.error("Erro ao salvar operação");
+      if (err instanceof Error) {
+        toast.error(err.message);
+      } else {
+        toast.error("Erro ao salvar operação");
+      }
     }
   };
 
@@ -120,68 +48,22 @@ export const useStockOperations = (user: User | null) => {
     }
 
     try {
-      // Find the operation in our state
-      const operationToRemove = stockOperations.find(op => op.id === id);
-      if (!operationToRemove) {
-        toast.error("Operação não encontrada");
-        return;
-      }
-      
-      // Get all operations from the database
-      const { data: allOperations, error: fetchError } = await supabase
-        .from("stock_operations")
-        .select();
-      
-      if (fetchError || !allOperations) {
-        console.error("Erro ao buscar operações:", fetchError);
-        toast.error("Erro ao remover operação");
-        return;
-      }
-
-      console.log("Todas as operações no banco:", allOperations);
-      
-      // Find matching operations by comparing properties
-      const matchingOperations = allOperations.filter(dbOp => 
-        dbOp.stock_name === operationToRemove.stockName &&
-        dbOp.date === operationToRemove.date &&
-        dbOp.type === operationToRemove.type &&
-        Number(dbOp.entry_price) === operationToRemove.entryPrice &&
-        Number(dbOp.exit_price) === operationToRemove.exitPrice &&
-        dbOp.quantity === operationToRemove.quantity
-      );
-      
-      if (matchingOperations.length === 0) {
-        console.error("Operação não encontrada no banco de dados");
-        toast.error("Operação não encontrada no banco de dados");
-        return;
-      }
-
-      console.log("Operações encontradas para remoção:", matchingOperations);
-      
-      // Delete the operation using the UUID from the found operation
-      const { error: deleteError } = await supabase
-        .from("stock_operations")
-        .delete()
-        .eq('id', matchingOperations[0].id);
-
-      if (deleteError) {
-        console.error("Erro ao remover operação:", deleteError);
-        toast.error("Erro ao remover operação");
-        return;
-      }
-
+      await removeOperation(id, stockOperations);
       // Remove the operation from state
       setStockOperations(prev => prev.filter(op => op.id !== id));
       toast.success("Operação removida com sucesso");
     } catch (err) {
-      console.error("Erro ao remover operação:", err);
-      toast.error("Erro ao remover operação");
+      if (err instanceof Error) {
+        toast.error(err.message);
+      } else {
+        toast.error("Erro ao remover operação");
+      }
     }
   };
 
   useEffect(() => {
     if (user) {
-      fetchStockOperations();
+      loadStockOperations();
     } else {
       setStockOperations([]);
       setLoading(false);
@@ -195,3 +77,6 @@ export const useStockOperations = (user: User | null) => {
     loading
   };
 };
+
+// Re-export the type for convenience
+export type { StockOperation };

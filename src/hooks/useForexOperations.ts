@@ -2,16 +2,18 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { User } from "@supabase/supabase-js";
-import { ForexOperation, NewForexOperation } from "@/types/forex";
-import { fetchForexOperations, addForexOperation as addForexOp, removeForexOperation as removeForexOp } from "@/services/forexService";
-
-export type { ForexOperation };
+import type { ForexOperation, NewForexOperation } from "@/types/forex";
+import { 
+  fetchForexOperations, 
+  addForexOperation as addOperation, 
+  removeForexOperation as removeOperation 
+} from "@/services/forexService";
 
 export const useForexOperations = (user: User | null) => {
   const [forexOperations, setForexOperations] = useState<ForexOperation[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch forex operations from service
+  // Load forex operations
   const loadForexOperations = async () => {
     try {
       setLoading(true);
@@ -29,11 +31,16 @@ export const useForexOperations = (user: User | null) => {
       return;
     }
 
-    const newOperation = await addForexOp(operation, user.id);
-    
-    if (newOperation) {
+    try {
+      const newOperation = await addOperation(operation, user);
       setForexOperations(prev => [newOperation, ...prev]);
       toast.success("Operação adicionada com sucesso!");
+    } catch (err) {
+      if (err instanceof Error) {
+        toast.error(err.message);
+      } else {
+        toast.error("Erro ao salvar operação");
+      }
     }
   };
 
@@ -44,18 +51,17 @@ export const useForexOperations = (user: User | null) => {
       return;
     }
 
-    // Find the operation in our state
-    const operationToRemove = forexOperations.find(op => op.id === id);
-    if (!operationToRemove) {
-      toast.error("Operação não encontrada");
-      return;
-    }
-
-    const success = await removeForexOp(operationToRemove, user.id);
-    
-    if (success) {
+    try {
+      await removeOperation(id, forexOperations);
+      // Remove the operation from state
       setForexOperations(prev => prev.filter(op => op.id !== id));
       toast.success("Operação removida com sucesso");
+    } catch (err) {
+      if (err instanceof Error) {
+        toast.error(err.message);
+      } else {
+        toast.error("Erro ao remover operação");
+      }
     }
   };
 
@@ -75,3 +81,6 @@ export const useForexOperations = (user: User | null) => {
     loading
   };
 };
+
+// Re-export the type for convenience
+export type { ForexOperation };

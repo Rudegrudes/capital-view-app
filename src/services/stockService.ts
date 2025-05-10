@@ -2,74 +2,68 @@
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { User } from "@supabase/supabase-js";
-import type { ForexOperation, NewForexOperation } from "@/types/forex";
+import type { StockOperation, NewStockOperation } from "@/types/stock";
+import { calculateStockProfit } from "@/utils/operationCalculations";
 
-// Fetch all forex operations from Supabase
-export const fetchForexOperations = async () => {
+// Fetch all stock operations from Supabase
+export const fetchStockOperations = async () => {
   try {
     const { data, error } = await supabase
-      .from("forex_operations")
+      .from("stock_operations")
       .select()
       .order("created_at", { ascending: false });
 
     if (error) {
-      console.error("Erro ao buscar operações de forex:", error);
-      toast.error("Erro ao carregar operações de forex");
+      console.error("Erro ao buscar operações de ações:", error);
+      toast.error("Erro ao carregar operações de ações");
       return [];
     }
 
     // Transform Supabase data to match our app's format
     return data.map(op => ({
-      id: Number(op.id.replace(/-/g, "").substring(0, 8), 16),
-      currencyPair: op.currency_pair,
+      id: Number(op.id.replace(/-/g, "").substring(0, 8), 16),  // Convert UUID to number ID for compatibility
+      stockName: op.stock_name,
       date: op.date,
-      type: op.type as "Buy" | "Sell",
+      type: op.type as "Compra" | "Venda",
       entryPrice: Number(op.entry_price),
       exitPrice: Number(op.exit_price),
-      lotSize: Number(op.lot_size),
-      initialCapital: Number(op.initial_capital),
-      profit: Number(op.profit),
-      roi: Number(op.roi)
+      quantity: op.quantity,
+      profit: Number(op.profit)
     }));
   } catch (err) {
-    console.error("Erro ao buscar operações de forex:", err);
-    toast.error("Erro ao carregar operações de forex");
+    console.error("Erro ao buscar operações de ações:", err);
+    toast.error("Erro ao carregar operações de ações");
     return [];
   }
 };
 
-// Add forex operation to Supabase
-export const addForexOperation = async (operation: NewForexOperation, user: User) => {
+// Add stock operation to Supabase
+export const addStockOperation = async (operation: NewStockOperation, user: User) => {
   try {
-    // Calculate profit and ROI
-    const profit = calculateForexProfit(
-      operation.entryPrice,
-      operation.exitPrice,
-      operation.lotSize,
+    const profit = calculateStockProfit(
+      operation.entryPrice, 
+      operation.exitPrice, 
+      operation.quantity, 
       operation.type
     );
     
-    const roi = calculateRoi(profit, operation.initialCapital);
-    
     // Insert operation into Supabase
     const { data, error } = await supabase
-      .from("forex_operations")
+      .from("stock_operations")
       .insert({
         user_id: user.id,
-        currency_pair: operation.currencyPair,
+        stock_name: operation.stockName,
         date: operation.date,
         type: operation.type,
         entry_price: operation.entryPrice,
         exit_price: operation.exitPrice,
-        lot_size: operation.lotSize,
-        initial_capital: operation.initialCapital,
-        profit: profit,
-        roi: roi
+        quantity: operation.quantity,
+        profit: profit
       })
       .select();
 
     if (error) {
-      console.error("Erro ao adicionar operação de forex:", error);
+      console.error("Erro ao adicionar operação de ação:", error);
       throw new Error("Erro ao salvar operação");
     }
 
@@ -77,28 +71,26 @@ export const addForexOperation = async (operation: NewForexOperation, user: User
     if (data && data[0]) {
       return {
         id: Number(data[0].id.replace(/-/g, "").substring(0, 8), 16),
-        currencyPair: operation.currencyPair,
+        stockName: operation.stockName,
         date: operation.date,
         type: operation.type,
         entryPrice: operation.entryPrice,
         exitPrice: operation.exitPrice,
-        lotSize: operation.lotSize,
-        initialCapital: operation.initialCapital,
-        profit: profit,
-        roi: roi
+        quantity: operation.quantity,
+        profit: profit
       };
     }
     throw new Error("Erro ao salvar operação");
   } catch (err) {
-    console.error("Erro ao adicionar operação de forex:", err);
+    console.error("Erro ao adicionar operação de ação:", err);
     throw err;
   }
 };
 
-// Remove forex operation from Supabase
-export const removeForexOperation = async (id: number, operations: ForexOperation[]) => {
+// Remove stock operation from Supabase
+export const removeStockOperation = async (id: number, operations: StockOperation[]) => {
   try {
-    // Find the operation in the state
+    // Find the operation in our state
     const operationToRemove = operations.find(op => op.id === id);
     if (!operationToRemove) {
       throw new Error("Operação não encontrada");
@@ -106,7 +98,7 @@ export const removeForexOperation = async (id: number, operations: ForexOperatio
     
     // Get all operations from the database
     const { data: allOperations, error: fetchError } = await supabase
-      .from("forex_operations")
+      .from("stock_operations")
       .select();
     
     if (fetchError || !allOperations) {
@@ -114,24 +106,28 @@ export const removeForexOperation = async (id: number, operations: ForexOperatio
       throw new Error("Erro ao remover operação");
     }
 
+    console.log("Todas as operações no banco:", allOperations);
+    
     // Find matching operations by comparing properties
     const matchingOperations = allOperations.filter(dbOp => 
-      dbOp.currency_pair === operationToRemove.currencyPair &&
+      dbOp.stock_name === operationToRemove.stockName &&
       dbOp.date === operationToRemove.date &&
       dbOp.type === operationToRemove.type &&
       Number(dbOp.entry_price) === operationToRemove.entryPrice &&
       Number(dbOp.exit_price) === operationToRemove.exitPrice &&
-      Number(dbOp.lot_size) === operationToRemove.lotSize
+      dbOp.quantity === operationToRemove.quantity
     );
     
     if (matchingOperations.length === 0) {
       console.error("Operação não encontrada no banco de dados");
       throw new Error("Operação não encontrada no banco de dados");
     }
+
+    console.log("Operações encontradas para remoção:", matchingOperations);
     
     // Delete the operation using the UUID from the found operation
     const { error: deleteError } = await supabase
-      .from("forex_operations")
+      .from("stock_operations")
       .delete()
       .eq('id', matchingOperations[0].id);
 
@@ -145,26 +141,4 @@ export const removeForexOperation = async (id: number, operations: ForexOperatio
     console.error("Erro ao remover operação:", err);
     throw err;
   }
-};
-
-// Helper functions
-const calculateForexProfit = (
-  entryPrice: number,
-  exitPrice: number,
-  lotSize: number,
-  type: "Buy" | "Sell"
-): number => {
-  // For a Buy position, profit is positive if exitPrice > entryPrice
-  // For a Sell position, profit is positive if exitPrice < entryPrice
-  const priceDifference = type === "Buy" 
-    ? exitPrice - entryPrice 
-    : entryPrice - exitPrice;
-  
-  // Each pip is typically worth $10 per lot for standard lots
-  return priceDifference * lotSize * 100;  // Assumes 100 pips = $10 per 0.01 lot
-};
-
-const calculateRoi = (profit: number, initialCapital: number): number => {
-  if (initialCapital === 0) return 0;
-  return (profit / initialCapital) * 100;
 };
