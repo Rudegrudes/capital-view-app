@@ -127,8 +127,8 @@ export const useStockOperations = (user: User | null) => {
         return;
       }
       
-      // We'll find the actual UUID by querying for the operation
-      const { data: dbOperation, error: findError } = await supabase
+      // First get all operations that match our criteria to find the UUID
+      const { data: matchingOperations, error: findError } = await supabase
         .from("stock_operations")
         .select()
         .match({
@@ -140,17 +140,19 @@ export const useStockOperations = (user: User | null) => {
           quantity: operationToRemove.quantity
         });
       
-      if (findError || !dbOperation || dbOperation.length === 0) {
+      if (findError || !matchingOperations || matchingOperations.length === 0) {
         console.error("Erro ao encontrar operação para remoção:", findError);
         toast.error("Erro ao remover operação");
         return;
       }
 
-      // Now delete the operation using the actual UUID
+      console.log("Operações encontradas para remoção:", matchingOperations);
+      
+      // Delete the operation using the UUID from the found operation
       const { error: deleteError } = await supabase
         .from("stock_operations")
         .delete()
-        .eq('id', dbOperation[0].id);
+        .eq('id', matchingOperations[0].id);
 
       if (deleteError) {
         console.error("Erro ao remover operação:", deleteError);
