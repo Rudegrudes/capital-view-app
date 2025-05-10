@@ -1,8 +1,10 @@
 
 import React, { createContext, useContext, ReactNode } from "react";
 import { useAuth } from "@/components/AuthProvider";
-import { useStockOperations, StockOperation } from "@/hooks/useStockOperations";
-import { useForexOperations, ForexOperation } from "@/hooks/useForexOperations";
+import { useStockOperations } from "@/hooks/useStockOperations";
+import { useForexOperations } from "@/hooks/useForexOperations";
+import type { StockOperation } from "@/hooks/useStockOperations";
+import type { ForexOperation } from "@/hooks/useForexOperations";
 
 type OperationsContextType = {
   stockOperations: StockOperation[];
@@ -24,7 +26,8 @@ export const useOperations = () => {
   return context;
 };
 
-export { StockOperation, ForexOperation };
+// Re-export the types correctly using the 'export type' syntax
+export type { StockOperation, ForexOperation };
 
 export const OperationsProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
