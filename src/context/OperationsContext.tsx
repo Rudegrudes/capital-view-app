@@ -284,7 +284,7 @@ export const OperationsProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
-      // Find the UUID from our formatted ID (we need to find the actual record)
+      // Find the operation in our state
       const operationToRemove = stockOperations.find(op => op.id === id);
       if (!operationToRemove) {
         toast.error("Operação não encontrada");
@@ -302,8 +302,7 @@ export const OperationsProvider = ({ children }: { children: ReactNode }) => {
           entry_price: operationToRemove.entryPrice,
           exit_price: operationToRemove.exitPrice,
           quantity: operationToRemove.quantity
-        })
-        .limit(1);
+        });
       
       if (findError || !dbOperation || dbOperation.length === 0) {
         console.error("Erro ao encontrar operação para remoção:", findError);
@@ -358,8 +357,7 @@ export const OperationsProvider = ({ children }: { children: ReactNode }) => {
           entry_price: operationToRemove.entryPrice,
           exit_price: operationToRemove.exitPrice,
           lot_size: operationToRemove.lotSize
-        })
-        .limit(1);
+        });
       
       if (findError || !dbOperation || dbOperation.length === 0) {
         console.error("Erro ao encontrar operação para remoção:", findError);
