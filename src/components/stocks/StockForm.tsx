@@ -1,18 +1,16 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { useOperations } from "@/context/OperationsContext";
-import { useAuth } from "@/components/AuthProvider";
+import { useOperations } from "@/context/OperationsContext"; // Corrigido para usar o contexto
+// import { useAuth } from "@/components/AuthProvider"; // Removido, pois o contexto agora lida com a lógica de usuário mockado
 
 const StockForm = () => {
-  const { addStockOperation } = useOperations();
-  const { user } = useAuth();
+  const { addStockOperation } = useOperations(); // Obtém addStockOperation do contexto
+  // const { user } = useAuth(); // Removido
   
-  // Form state
   const [stockName, setStockName] = useState("");
   const [date, setDate] = useState("");
   const [type, setType] = useState<"Compra" | "Venda">("Compra");
@@ -22,10 +20,10 @@ const StockForm = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleAddOperation = async () => {
-    if (!user) {
-      toast.error("Você precisa estar logado para adicionar operações");
-      return;
-    }
+    // if (!user) { // Removida a checagem de usuário, pois o contexto/hook lida com isso
+    //   toast.error("Você precisa estar logado para adicionar operações");
+    //   return;
+    // }
 
     if (!stockName || !date || !entryPrice || !exitPrice || !quantity) {
       toast.error("Por favor, preencha todos os campos");
@@ -42,13 +40,12 @@ const StockForm = () => {
         entryPrice: parseFloat(entryPrice),
         exitPrice: parseFloat(exitPrice),
         quantity: parseInt(quantity),
+        // user_id e profit são omitidos, conforme a tipagem no context
       };
 
-      // Add operation using context function
       await addStockOperation(newOperation);
-      toast.success("Operação adicionada com sucesso!");
+      // toast.success("Operação adicionada com sucesso!"); // O hook/serviço já deve mostrar o toast
 
-      // Reset form
       setStockName("");
       setDate("");
       setType("Compra");
@@ -56,8 +53,8 @@ const StockForm = () => {
       setExitPrice("");
       setQuantity("");
     } catch (error) {
-      console.error("Erro ao adicionar operação:", error);
-      toast.error("Erro ao adicionar operação");
+      console.error("Erro ao adicionar operação no StockForm:", error);
+      // toast.error("Erro ao adicionar operação"); // O hook/serviço já deve mostrar o toast de erro
     } finally {
       setIsSubmitting(false);
     }
@@ -65,7 +62,7 @@ const StockForm = () => {
 
   return (
     <div className="bg-white rounded-lg shadow-sm p-6">
-      <h3 className="text-xl font-semibold text-teal mb-4">Nova Operação</h3>
+      <h3 className="text-xl font-semibold text-teal mb-4">Nova Operação de Ação</h3>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
@@ -140,18 +137,15 @@ const StockForm = () => {
       <Button 
         className="w-full mt-6 bg-green hover:bg-opacity-90 hover-effect"
         onClick={handleAddOperation}
-        disabled={isSubmitting || !user}
+        disabled={isSubmitting}
       >
         {isSubmitting ? "Adicionando..." : "Adicionar Operação"}
       </Button>
       
-      {!user && (
-        <p className="mt-2 text-center text-red-500 text-sm">
-          Você precisa estar logado para adicionar operações
-        </p>
-      )}
+      {/* Removida a mensagem de erro sobre login, pois o fluxo foi alterado */}
     </div>
   );
 };
 
 export default StockForm;
+
