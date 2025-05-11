@@ -129,13 +129,36 @@ export const removeForexOperation = async (id: number, operations: ForexOperatio
 
     console.log("Operações encontradas para remoção:", matchingOperations);
     
-    // First, delete any dependent records (if any exist) using rpc function
-    const { error: deleteRelatedError } = await supabase
-      .rpc('delete_forex_operation_dependents', { operation_uuid: matchingOperations[0].id });
-    
-    if (deleteRelatedError) {
-      console.error("Erro ao remover registros dependentes:", deleteRelatedError);
-      // Continue with deletion attempt even if this fails - the rpc might not exist
+    // Primeiro, vamos tentar excluir os registros dependentes através da função RPC
+    try {
+      const { error: deleteRelatedError } = await supabase
+        .rpc('delete_forex_operation_dependents', { operation_uuid: matchingOperations[0].id });
+      
+      if (deleteRelatedError) {
+        console.error("Erro ao remover registros dependentes:", deleteRelatedError);
+        // Continuamos mesmo com erro, pois a função RPC pode não existir ainda
+      }
+    } catch (rpcError) {
+      console.error("Erro ao executar função RPC:", rpcError);
+      // Continuamos para tentar a exclusão direta
+    }
+
+    // Agora tentamos excluir diretamente qualquer registro dependente que possa existir
+    // Isso depende das tabelas relacionadas no seu banco de dados
+    try {
+      // Exemplo: Supondo que exista uma tabela de análises relacionada
+      const { error: deleteAnalysisError } = await supabase
+        .from("forex_operation_analysis")  // Substitua pelo nome real da tabela
+        .delete()
+        .eq('operation_id', matchingOperations[0].id);
+      
+      if (deleteAnalysisError) {
+        console.error("Erro ao remover análises:", deleteAnalysisError);
+        // Se a tabela não existir, continuamos normalmente
+      }
+    } catch (relatedError) {
+      console.error("Erro ao remover registros relacionados:", relatedError);
+      // Continuamos para tentar a exclusão da operação principal
     }
 
     // Delete the operation using the UUID from the found operation
