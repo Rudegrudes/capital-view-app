@@ -129,6 +129,15 @@ export const removeForexOperation = async (id: number, operations: ForexOperatio
 
     console.log("Operações encontradas para remoção:", matchingOperations);
     
+    // First, delete any dependent records (if any exist) using rpc function
+    const { error: deleteRelatedError } = await supabase
+      .rpc('delete_forex_operation_dependents', { operation_uuid: matchingOperations[0].id });
+    
+    if (deleteRelatedError) {
+      console.error("Erro ao remover registros dependentes:", deleteRelatedError);
+      // Continue with deletion attempt even if this fails - the rpc might not exist
+    }
+
     // Delete the operation using the UUID from the found operation
     const { error: deleteError } = await supabase
       .from("forex_operations")
@@ -137,7 +146,7 @@ export const removeForexOperation = async (id: number, operations: ForexOperatio
 
     if (deleteError) {
       console.error("Erro ao remover operação:", deleteError);
-      throw new Error("Erro ao remover operação");
+      throw new Error("Erro ao remover operação: " + deleteError.message);
     }
 
     return true;
