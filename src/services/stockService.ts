@@ -2,7 +2,7 @@
 
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { User } from "@supabase/supabase-js";
+// import { User } from "@supabase/supabase-js"; // User object no longer needed for addStockOperation
 import type { StockOperation, NewStockOperation } from "@/types/stock";
 import { calculateStockProfit } from "@/utils/operationCalculations";
 
@@ -20,11 +20,10 @@ export const fetchStockOperations = async (): Promise<StockOperation[]> => {
       toast.error("Erro ao carregar operações de ações");
       return [];
     }
-    console.log("[stockService] Operações de ações buscadas com sucesso."); // Removido 'data' do log para evitar verbosidade excessiva no console
-    // Transform Supabase data to match our app's format, ensuring ID is a string (UUID)
+    console.log("[stockService] Operações de ações buscadas com sucesso.");
     return data.map(op => ({
-      id: op.id, // Supabase ID should be string (UUID)
-      user_id: op.user_id,
+      id: op.id,
+      user_id: op.user_id, // Continuamos a buscar, mas não será usado para inserção da mesma forma
       stockName: op.stock_name,
       date: op.date,
       type: op.type as "Compra" | "Venda",
@@ -41,8 +40,9 @@ export const fetchStockOperations = async (): Promise<StockOperation[]> => {
 };
 
 // Add stock operation to Supabase
-export const addStockOperation = async (operation: NewStockOperation, user: User): Promise<StockOperation> => {
-  console.log("[stockService] Adicionando nova operação de ação para o usuário:", user.id);
+// Removido o parâmetro 'user: User' pois enviaremos user_id: null
+export const addStockOperation = async (operation: NewStockOperation): Promise<StockOperation> => {
+  console.log("[stockService] Adicionando nova operação de ação (user_id será null).");
   try {
     const profit = calculateStockProfit(
       operation.entryPrice,
@@ -54,7 +54,7 @@ export const addStockOperation = async (operation: NewStockOperation, user: User
     const { data, error } = await supabase
       .from("stock_operations")
       .insert({
-        user_id: user.id,
+        user_id: null, // MODIFICADO: Enviando null para user_id
         stock_name: operation.stockName,
         date: operation.date,
         type: operation.type,
@@ -74,8 +74,8 @@ export const addStockOperation = async (operation: NewStockOperation, user: User
     if (data) {
       console.log("[stockService] Operação de ação adicionada com sucesso.");
       return {
-        id: data.id, // Supabase ID is string (UUID)
-        user_id: data.user_id,
+        id: data.id,
+        user_id: data.user_id, // Será null se a inserção com null for bem-sucedida
         stockName: data.stock_name,
         date: data.date,
         type: data.type as "Compra" | "Venda",
@@ -105,7 +105,7 @@ export const removeStockOperation = async (id: string): Promise<boolean> => {
     const { error } = await supabase
       .from("stock_operations")
       .delete()
-      .eq("id", id); // Usar diretamente o ID (UUID string)
+      .eq("id", id);
 
     if (error) {
       console.error("[stockService] Erro ao remover operação ID:", id, "no Supabase. Detalhes do erro:", error);
@@ -122,9 +122,7 @@ export const removeStockOperation = async (id: string): Promise<boolean> => {
     return true;
   } catch (err) {
     console.error("[stockService] Exceção ao remover operação ID:", id, ". Detalhes da exceção:", err);
-    // Assegura que o erro seja uma instância de Error antes de relançar ou usar sua mensagem
     if (err instanceof Error) {
-        // Se já for uma das mensagens de erro personalizadas, relance-a
         if (err.message.startsWith("Operação não encontrada") || err.message.startsWith("Não foi possível remover") || err.message.startsWith("Erro ao remover operação no Supabase")) {
             throw err;
         }

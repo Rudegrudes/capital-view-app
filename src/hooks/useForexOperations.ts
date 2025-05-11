@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from "react"; // Adicionado useCallback
+import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
-import { User } from "@supabase/supabase-js"; // Mantido para o mock, se necessário em add
+// import { User } from "@supabase/supabase-js"; // No longer directly needed for add/remove operation signatures
 import type { ForexOperation, NewForexOperation } from "@/types/forex";
 import { 
   fetchForexOperations as fetchOperationsService, 
@@ -8,19 +8,9 @@ import {
   removeForexOperation as removeOperationService 
 } from "@/services/forexService";
 
-// Mock user para consistência, embora a lógica de autenticação real tenha sido removida/simplificada
-const mockUser: User | null = {
-  id: "mock-user-id-for-forex-operations",
-  app_metadata: { provider: "email", providers: ["email"] },
-  user_metadata: {},
-  aud: "authenticated",
-  created_at: new Date().toISOString(),
-  email: "mockuser-forex@example.com",
-  phone: "",
-  updated_at: new Date().toISOString(),
-} as User;
+export const useForexOperations = () => {
+  // const user: User | null = { ... }; // Mock user object is not passed to service anymore
 
-export const useForexOperations = (/* user: User | null */) => { // Parâmetro user removido
   const [forexOperations, setForexOperations] = useState<ForexOperation[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -40,15 +30,10 @@ export const useForexOperations = (/* user: User | null */) => { // Parâmetro u
   }, []);
 
   const addForexOperation = async (operation: NewForexOperation) => {
-    // if (!mockUser) { // A checagem de usuário pode ser removida ou adaptada se o serviço não precisar mais do user
-    //   toast.error("Você precisa estar logado para adicionar operações");
-    //   return;
-    // }
     console.log("[useForexOperations] Adicionando operação de forex:", operation);
     try {
-      // Passando mockUser para addOperationService, que espera um objeto User.
-      // O serviço forexService.ts ainda usa user.id.
-      const newOperation = await addOperationService(operation, mockUser as User); // Garantir que mockUser não seja null aqui
+      // MODIFICADO: addOperationService (from forexService) no longer takes a user argument
+      const newOperation = await addOperationService(operation);
       setForexOperations(prev => [newOperation, ...prev]);
       toast.success("Operação de Forex adicionada com sucesso!");
       console.log("[useForexOperations] Operação de forex adicionada ao estado:", newOperation);
@@ -62,18 +47,13 @@ export const useForexOperations = (/* user: User | null */) => { // Parâmetro u
     }
   };
 
-  const removeForexOperation = async (id: number) => { // ID é number aqui, conforme o tipo ForexOperation
+  // MODIFICADO: ID é string (UUID) conforme alteração no forexService
+  const removeForexOperation = async (id: string) => { 
     console.log("[useForexOperations] Tentando remover operação de forex com ID:", id);
-    // if (!mockUser) { // Removida checagem de usuário
-    //   toast.error("Você precisa estar logado para remover operações");
-    //   return;
-    // }
-
     try {
-      // A função removeOperationService em forexService.ts espera o ID e a lista atual de operações.
-      // Isso é problemático e deve ser refatorado no serviço para usar apenas o ID (idealmente UUID string).
-      await removeOperationService(id, forexOperations);
-      setForexOperations(prev => prev.filter(op => op.id !== id));
+      // MODIFICADO: removeOperationService (from forexService) now takes only string ID
+      await removeOperationService(id);
+      setForexOperations(prev => prev.filter(op => op.id !== id)); // Ensure op.id is also string for comparison
       toast.success("Operação de Forex removida com sucesso");
       console.log("[useForexOperations] Operação de forex ID:", id, "removida com sucesso do estado.");
     } catch (err) {
@@ -87,20 +67,15 @@ export const useForexOperations = (/* user: User | null */) => { // Parâmetro u
   };
 
   useEffect(() => {
-    // if (mockUser) { // Carrega operações independentemente do mockUser, pois a lógica de auth foi simplificada
-      loadForexOperations();
-    // } else {
-    //   setForexOperations([]);
-    //   setLoading(false);
-    // }
-  }, [loadForexOperations]); // Removida dependência mockUser, loadForexOperations é estável
+    loadForexOperations();
+  }, [loadForexOperations]);
 
   return {
     forexOperations,
     addForexOperation,
     removeForexOperation,
     loading,
-    refreshForexOperations: loadForexOperations // Expor função de recarregar
+    refreshForexOperations: loadForexOperations
   };
 };
 
