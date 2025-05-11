@@ -119,7 +119,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      delete_forex_operation_dependents: {
+        Args: { operation_uuid: string }
+        Returns: undefined
+      }
+      delete_stock_operation_dependents: {
+        Args: { operation_uuid: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

@@ -139,24 +139,6 @@ export const removeStockOperation = async (id: number, operations: StockOperatio
       // Continuamos para tentar a exclusão direta
     }
 
-    // Agora tentamos excluir diretamente qualquer registro dependente que possa existir
-    // Isso depende das tabelas relacionadas no seu banco de dados
-    try {
-      // Exemplo: Supondo que exista uma tabela de comentários relacionada
-      const { error: deleteCommentsError } = await supabase
-        .from("stock_operation_comments")  // Substitua pelo nome real da tabela
-        .delete()
-        .eq('operation_id', matchingOperations[0].id);
-      
-      if (deleteCommentsError) {
-        console.error("Erro ao remover comentários:", deleteCommentsError);
-        // Se a tabela não existir, continuamos normalmente
-      }
-    } catch (relatedError) {
-      console.error("Erro ao remover registros relacionados:", relatedError);
-      // Continuamos para tentar a exclusão da operação principal
-    }
-
     // Delete the operation using the UUID from the found operation
     const { error: deleteError } = await supabase
       .from("stock_operations")
