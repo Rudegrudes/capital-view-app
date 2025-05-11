@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { User } from "@supabase/supabase-js";
 import type { ForexOperation, NewForexOperation } from "@/types/forex";
+import { calculateForexProfit, calculateForexROI } from "@/utils/operationCalculations";
 
 // Fetch all forex operations from Supabase
 export const fetchForexOperations = async () => {
@@ -20,10 +21,10 @@ export const fetchForexOperations = async () => {
 
     // Transform Supabase data to match our app's format
     return data.map(op => ({
-      id: Number(op.id.replace(/-/g, "").substring(0, 8), 16),
+      id: Number(op.id.replace(/-/g, "").substring(0, 8), 16),  // Convert UUID to number ID for compatibility
       currencyPair: op.currency_pair,
       date: op.date,
-      type: op.type as "Buy" | "Sell",
+      type: op.type as "Compra" | "Venda",
       entryPrice: Number(op.entry_price),
       exitPrice: Number(op.exit_price),
       lotSize: Number(op.lot_size),
@@ -42,14 +43,8 @@ export const fetchForexOperations = async () => {
 export const addForexOperation = async (operation: NewForexOperation, user: User) => {
   try {
     // Calculate profit and ROI
-    const profit = calculateForexProfit(
-      operation.entryPrice,
-      operation.exitPrice,
-      operation.lotSize,
-      operation.type
-    );
-    
-    const roi = calculateRoi(profit, operation.initialCapital);
+    const profit = calculateForexProfit(operation.entryPrice, operation.exitPrice, operation.lotSize, operation.type);
+    const roi = calculateForexROI(profit, operation.initialCapital);
     
     // Insert operation into Supabase
     const { data, error } = await supabase
@@ -98,7 +93,7 @@ export const addForexOperation = async (operation: NewForexOperation, user: User
 // Remove forex operation from Supabase
 export const removeForexOperation = async (id: number, operations: ForexOperation[]) => {
   try {
-    // Find the operation in the state
+    // Find the operation in our state
     const operationToRemove = operations.find(op => op.id === id);
     if (!operationToRemove) {
       throw new Error("Operação não encontrada");
@@ -114,6 +109,8 @@ export const removeForexOperation = async (id: number, operations: ForexOperatio
       throw new Error("Erro ao remover operação");
     }
 
+    console.log("Todas as operações no banco:", allOperations);
+    
     // Find matching operations by comparing properties
     const matchingOperations = allOperations.filter(dbOp => 
       dbOp.currency_pair === operationToRemove.currencyPair &&
@@ -121,13 +118,16 @@ export const removeForexOperation = async (id: number, operations: ForexOperatio
       dbOp.type === operationToRemove.type &&
       Number(dbOp.entry_price) === operationToRemove.entryPrice &&
       Number(dbOp.exit_price) === operationToRemove.exitPrice &&
-      Number(dbOp.lot_size) === operationToRemove.lotSize
+      Number(dbOp.lot_size) === operationToRemove.lotSize &&
+      Number(dbOp.initial_capital) === operationToRemove.initialCapital
     );
     
     if (matchingOperations.length === 0) {
       console.error("Operação não encontrada no banco de dados");
       throw new Error("Operação não encontrada no banco de dados");
     }
+
+    console.log("Operações encontradas para remoção:", matchingOperations);
     
     // Delete the operation using the UUID from the found operation
     const { error: deleteError } = await supabase
@@ -145,26 +145,4 @@ export const removeForexOperation = async (id: number, operations: ForexOperatio
     console.error("Erro ao remover operação:", err);
     throw err;
   }
-};
-
-// Helper functions
-const calculateForexProfit = (
-  entryPrice: number,
-  exitPrice: number,
-  lotSize: number,
-  type: "Buy" | "Sell"
-): number => {
-  // For a Buy position, profit is positive if exitPrice > entryPrice
-  // For a Sell position, profit is positive if exitPrice < entryPrice
-  const priceDifference = type === "Buy" 
-    ? exitPrice - entryPrice 
-    : entryPrice - exitPrice;
-  
-  // Each pip is typically worth $10 per lot for standard lots
-  return priceDifference * lotSize * 100;  // Assumes 100 pips = $10 per 0.01 lot
-};
-
-const calculateRoi = (profit: number, initialCapital: number): number => {
-  if (initialCapital === 0) return 0;
-  return (profit / initialCapital) * 100;
 };
