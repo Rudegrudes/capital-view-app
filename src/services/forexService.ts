@@ -24,7 +24,7 @@ export const fetchForexOperations = async () => {
       id: Number(op.id.replace(/-/g, "").substring(0, 8), 16),  // Convert UUID to number ID for compatibility
       currencyPair: op.currency_pair,
       date: op.date,
-      type: op.type as "Compra" | "Venda",
+      type: op.type as "Buy" | "Sell", // Cast to our enum type
       entryPrice: Number(op.entry_price),
       exitPrice: Number(op.exit_price),
       lotSize: Number(op.lot_size),
