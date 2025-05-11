@@ -1,3 +1,4 @@
+"use client";
 
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,7 +7,8 @@ import type { StockOperation, NewStockOperation } from "@/types/stock";
 import { calculateStockProfit } from "@/utils/operationCalculations";
 
 // Fetch all stock operations from Supabase
-export const fetchStockOperations = async () => {
+export const fetchStockOperations = async (): Promise<StockOperation[]> => {
+  console.log("[stockService] Buscando todas as operações de ações.");
   try {
     const { data, error } = await supabase
       .from("stock_operations")
@@ -14,14 +16,15 @@ export const fetchStockOperations = async () => {
       .order("created_at", { ascending: false });
 
     if (error) {
-      console.error("Erro ao buscar operações de ações:", error);
+      console.error("[stockService] Erro ao buscar operações de ações:", error);
       toast.error("Erro ao carregar operações de ações");
       return [];
     }
-
-    // Transform Supabase data to match our app's format
+    console.log("[stockService] Operações de ações buscadas com sucesso."); // Removido 'data' do log para evitar verbosidade excessiva no console
+    // Transform Supabase data to match our app's format, ensuring ID is a string (UUID)
     return data.map(op => ({
-      id: Number(op.id.replace(/-/g, "").substring(0, 8), 16),  // Convert UUID to number ID for compatibility
+      id: op.id, // Supabase ID should be string (UUID)
+      user_id: op.user_id,
       stockName: op.stock_name,
       date: op.date,
       type: op.type as "Compra" | "Venda",
@@ -31,23 +34,23 @@ export const fetchStockOperations = async () => {
       profit: Number(op.profit)
     }));
   } catch (err) {
-    console.error("Erro ao buscar operações de ações:", err);
+    console.error("[stockService] Exceção ao buscar operações de ações:", err);
     toast.error("Erro ao carregar operações de ações");
     return [];
   }
 };
 
 // Add stock operation to Supabase
-export const addStockOperation = async (operation: NewStockOperation, user: User) => {
+export const addStockOperation = async (operation: NewStockOperation, user: User): Promise<StockOperation> => {
+  console.log("[stockService] Adicionando nova operação de ação para o usuário:", user.id);
   try {
     const profit = calculateStockProfit(
-      operation.entryPrice, 
-      operation.exitPrice, 
-      operation.quantity, 
+      operation.entryPrice,
+      operation.exitPrice,
+      operation.quantity,
       operation.type
     );
     
-    // Insert operation into Supabase
     const { data, error } = await supabase
       .from("stock_operations")
       .insert({
@@ -60,99 +63,74 @@ export const addStockOperation = async (operation: NewStockOperation, user: User
         quantity: operation.quantity,
         profit: profit
       })
-      .select();
+      .select()
+      .single();
 
     if (error) {
-      console.error("Erro ao adicionar operação de ação:", error);
-      throw new Error("Erro ao salvar operação");
+      console.error("[stockService] Erro ao adicionar operação de ação no Supabase:", error);
+      throw new Error("Erro ao salvar operação: " + error.message);
     }
 
-    // Return the new operation with a formatted ID
-    if (data && data[0]) {
+    if (data) {
+      console.log("[stockService] Operação de ação adicionada com sucesso.");
       return {
-        id: Number(data[0].id.replace(/-/g, "").substring(0, 8), 16),
-        stockName: operation.stockName,
-        date: operation.date,
-        type: operation.type,
-        entryPrice: operation.entryPrice,
-        exitPrice: operation.exitPrice,
-        quantity: operation.quantity,
-        profit: profit
+        id: data.id, // Supabase ID is string (UUID)
+        user_id: data.user_id,
+        stockName: data.stock_name,
+        date: data.date,
+        type: data.type as "Compra" | "Venda",
+        entryPrice: Number(data.entry_price),
+        exitPrice: Number(data.exit_price),
+        quantity: data.quantity,
+        profit: Number(data.profit)
       };
     }
-    throw new Error("Erro ao salvar operação");
+    console.error("[stockService] Erro ao salvar operação: não houve retorno de dados do Supabase.");
+    throw new Error("Erro ao salvar operação: não houve retorno de dados.");
   } catch (err) {
-    console.error("Erro ao adicionar operação de ação:", err);
-    throw err;
+    console.error("[stockService] Exceção ao adicionar operação de ação:", err);
+    if (err instanceof Error) throw err;
+    throw new Error("Erro desconhecido ao adicionar operação.");
   }
 };
 
-// Remove stock operation from Supabase
-export const removeStockOperation = async (id: number, operations: StockOperation[]) => {
+// Remove stock operation from Supabase by its UUID
+export const removeStockOperation = async (id: string): Promise<boolean> => {
+  console.log("[stockService] Tentando remover operação com ID (UUID):", id);
+  if (!id || typeof id !== 'string') {
+    console.error("[stockService] ID inválido fornecido para remoção:", id);
+    throw new Error("ID inválido para remoção.");
+  }
   try {
-    // Find the operation in our state
-    const operationToRemove = operations.find(op => op.id === id);
-    if (!operationToRemove) {
-      throw new Error("Operação não encontrada");
-    }
-    
-    // Get all operations from the database
-    const { data: allOperations, error: fetchError } = await supabase
-      .from("stock_operations")
-      .select();
-    
-    if (fetchError || !allOperations) {
-      console.error("Erro ao buscar operações:", fetchError);
-      throw new Error("Erro ao remover operação");
-    }
-
-    console.log("Todas as operações no banco:", allOperations);
-    
-    // Find matching operations by comparing properties
-    const matchingOperations = allOperations.filter(dbOp => 
-      dbOp.stock_name === operationToRemove.stockName &&
-      dbOp.date === operationToRemove.date &&
-      dbOp.type === operationToRemove.type &&
-      Number(dbOp.entry_price) === operationToRemove.entryPrice &&
-      Number(dbOp.exit_price) === operationToRemove.exitPrice &&
-      dbOp.quantity === operationToRemove.quantity
-    );
-    
-    if (matchingOperations.length === 0) {
-      console.error("Operação não encontrada no banco de dados");
-      throw new Error("Operação não encontrada no banco de dados");
-    }
-
-    console.log("Operações encontradas para remoção:", matchingOperations);
-    
-    // Primeiro, vamos tentar excluir os registros dependentes através da função RPC
-    try {
-      const { error: deleteRelatedError } = await supabase
-        .rpc('delete_stock_operation_dependents', { operation_uuid: matchingOperations[0].id });
-      
-      if (deleteRelatedError) {
-        console.error("Erro ao remover registros dependentes:", deleteRelatedError);
-        // Continuamos mesmo com erro, pois a função RPC pode não existir ainda
-      }
-    } catch (rpcError) {
-      console.error("Erro ao executar função RPC:", rpcError);
-      // Continuamos para tentar a exclusão direta
-    }
-
-    // Delete the operation using the UUID from the found operation
-    const { error: deleteError } = await supabase
+    const { error } = await supabase
       .from("stock_operations")
       .delete()
-      .eq('id', matchingOperations[0].id);
+      .eq("id", id); // Usar diretamente o ID (UUID string)
 
-    if (deleteError) {
-      console.error("Erro ao remover operação:", deleteError);
-      throw new Error("Erro ao remover operação: " + deleteError.message);
+    if (error) {
+      console.error("[stockService] Erro ao remover operação ID:", id, "no Supabase. Detalhes do erro:", error);
+      if (error.code === "PGRST204" || error.message.toLowerCase().includes("no rows found")) {
+        console.warn("[stockService] Operação ID:", id, "não encontrada no Supabase para remoção. Erro Supabase:", error.message);
+        throw new Error("Operação não encontrada ou você não tem permissão para removê-la (verifique RLS).");
+      } else if (error.message.includes("constraint")) {
+         console.warn("[stockService] Violação de restrição ao remover operação ID:", id, ". Erro Supabase:", error.message);
+         throw new Error("Não foi possível remover a operação devido a registros dependentes ou restrições de permissão.");
+      }
+      throw new Error("Erro ao remover operação no Supabase: " + error.message);
     }
-
+    console.log("[stockService] Operação ID:", id, "removida com sucesso do Supabase (ou não encontrada, o que é tratado como sucesso na lógica de UI).");
     return true;
   } catch (err) {
-    console.error("Erro ao remover operação:", err);
-    throw err;
+    console.error("[stockService] Exceção ao remover operação ID:", id, ". Detalhes da exceção:", err);
+    // Assegura que o erro seja uma instância de Error antes de relançar ou usar sua mensagem
+    if (err instanceof Error) {
+        // Se já for uma das mensagens de erro personalizadas, relance-a
+        if (err.message.startsWith("Operação não encontrada") || err.message.startsWith("Não foi possível remover") || err.message.startsWith("Erro ao remover operação no Supabase")) {
+            throw err;
+        }
+        throw new Error("Erro desconhecido ao tentar remover operação: " + err.message);
+    } 
+    throw new Error("Erro desconhecido ao tentar remover operação.");
   }
 };
+

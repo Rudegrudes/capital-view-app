@@ -1,4 +1,3 @@
-
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
@@ -13,19 +12,24 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { useOperations } from "@/context/OperationsContext";
+import { useStockOperations } from "@/hooks/useStockOperations"; // CORRIGIDO: useStockOperations
 import { useState } from "react";
+import type { StockOperation } from "@/types/stock";
 
 const StockHistory = () => {
-  const { stockOperations, loading, removeStockOperation } = useOperations();
+  const { stockOperations, loading, removeStockOperation } = useStockOperations(); // CORRIGIDO: useStockOperations()
   const [isDeleting, setIsDeleting] = useState(false);
-  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: string) => {
+    console.log("[StockHistory] Iniciando exclusão para o ID:", id);
     setIsDeleting(true);
     setDeletingId(id);
     try {
       await removeStockOperation(id);
+      console.log("[StockHistory] Exclusão concluída para o ID:", id);
+    } catch (error) {
+      console.error("[StockHistory] Erro ao excluir a operação ID:", id, error);
     } finally {
       setIsDeleting(false);
       setDeletingId(null);
@@ -63,7 +67,7 @@ const StockHistory = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {stockOperations.map((op) => (
+              {stockOperations.map((op: StockOperation) => (
                 <TableRow key={op.id}>
                   <TableCell className="font-medium">{op.stockName}</TableCell>
                   <TableCell>{new Date(op.date).toLocaleDateString()}</TableCell>
@@ -71,7 +75,7 @@ const StockHistory = () => {
                   <TableCell>R$ {op.entryPrice.toFixed(2)}</TableCell>
                   <TableCell>R$ {op.exitPrice.toFixed(2)}</TableCell>
                   <TableCell>{op.quantity}</TableCell>
-                  <TableCell className={op.profit && op.profit >= 0 ? 'text-green font-medium' : 'text-red-500 font-medium'}>
+                  <TableCell className={op.profit && op.profit >= 0 ? 'text-green-500 font-medium' : 'text-red-500 font-medium'}> {/* Corrigido para green-500 */}
                     R$ {op.profit?.toFixed(2)}
                   </TableCell>
                   <TableCell>
@@ -96,7 +100,10 @@ const StockHistory = () => {
                         <AlertDialogFooter>
                           <AlertDialogCancel>Cancelar</AlertDialogCancel>
                           <AlertDialogAction 
-                            onClick={() => handleDelete(op.id)}
+                            onClick={() => {
+                              console.log("[StockHistory] Botão de remover clicado para o ID:", op.id);
+                              handleDelete(op.id);
+                            }}
                             disabled={isDeleting && deletingId === op.id}
                             className="bg-red-500 hover:bg-red-600"
                           >
@@ -121,3 +128,4 @@ const StockHistory = () => {
 };
 
 export default StockHistory;
+
