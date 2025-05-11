@@ -10,7 +10,7 @@ export const fetchForexOperations = async () => {
   try {
     const { data, error } = await supabase
       .from("forex_operations")
-      .select()
+      .select("*")
       .order("created_at", { ascending: false });
 
     if (error) {
