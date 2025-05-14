@@ -1,3 +1,4 @@
+
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
@@ -12,12 +13,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { useStockOperations } from "@/hooks/useStockOperations"; // CORRIGIDO: useStockOperations
+import { useStockOperations } from "@/hooks/useStockOperations"; 
 import { useState } from "react";
 import type { StockOperation } from "@/types/stock";
 
 const StockHistory = () => {
-  const { stockOperations, loading, removeStockOperation } = useStockOperations(); // CORRIGIDO: useStockOperations()
+  const { stockOperations, loading, removeStockOperation } = useStockOperations();
   const [isDeleting, setIsDeleting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -75,7 +76,7 @@ const StockHistory = () => {
                   <TableCell>R$ {op.entryPrice.toFixed(2)}</TableCell>
                   <TableCell>R$ {op.exitPrice.toFixed(2)}</TableCell>
                   <TableCell>{op.quantity}</TableCell>
-                  <TableCell className={op.profit && op.profit >= 0 ? 'text-green-500 font-medium' : 'text-red-500 font-medium'}> {/* Corrigido para green-500 */}
+                  <TableCell className={op.profit && op.profit >= 0 ? 'text-green-500 font-medium' : 'text-red-500 font-medium'}>
                     R$ {op.profit?.toFixed(2)}
                   </TableCell>
                   <TableCell>
@@ -128,4 +129,3 @@ const StockHistory = () => {
 };
 
 export default StockHistory;
-

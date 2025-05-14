@@ -1,8 +1,8 @@
+
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
-// import { User } from "@supabase/supabase-js"; // No longer directly needed for add operation signature
 import type { StockOperation, NewStockOperation } from "@/types/stock";
 import { 
   fetchStockOperations as fetchOperationsService, 
@@ -11,8 +11,6 @@ import {
 } from "@/services/stockService";
 
 export const useStockOperations = () => {
-  // const user: User | null = { ... }; // Mock user object is not passed to addOperationService anymore
-
   const [stockOperations, setStockOperations] = useState<StockOperation[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -34,7 +32,6 @@ export const useStockOperations = () => {
   const addStockOperation = async (operation: NewStockOperation) => {
     console.log("[useStockOperations] Adicionando operação de ação:", operation);
     try {
-      // MODIFICADO: addOperationService (from stockService) no longer takes a user argument
       const newOperation = await addOperationService(operation);
       setStockOperations(prev => [newOperation, ...prev]);
       toast.success("Operação de ação adicionada com sucesso!");
@@ -80,4 +77,3 @@ export const useStockOperations = () => {
 };
 
 export type { StockOperation };
-

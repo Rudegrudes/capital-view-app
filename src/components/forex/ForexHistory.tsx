@@ -19,9 +19,9 @@ import { useState } from "react";
 const ForexHistory = () => {
   const { forexOperations, loading, removeForexOperation } = useOperations();
   const [isDeleting, setIsDeleting] = useState(false);
-  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: string) => {
     setIsDeleting(true);
     setDeletingId(id);
     try {
