@@ -1,5 +1,5 @@
+
 import React, { createContext, useContext, ReactNode } from "react";
-// import { useAuth } from "@/components/AuthProvider"; // Removido: não usaremos mais useAuth aqui diretamente
 import { useStockOperations } from "@/hooks/useStockOperations";
 import { useForexOperations } from "@/hooks/useForexOperations";
 import type { StockOperation, NewStockOperation as NewStockOp } from "@/types/stock"; // Renomeado para evitar conflito
@@ -25,7 +25,7 @@ type OperationsContextType = {
   addStockOperation: (operation: Omit<StockOperation, "id" | "profit" | "user_id">) => Promise<void>; // Ajustado para o que o form envia
   addForexOperation: (operation: NewForexOperation) => Promise<void>;
   removeStockOperation: (id: string) => Promise<void>; // ID é string (UUID)
-  removeForexOperation: (id: number) => Promise<void>; // ID é number em Forex (precisa verificar isso)
+  removeForexOperation: (id: string) => Promise<void>; // Corrigido: ID é string em Forex também
   loading: boolean;
 };
 
@@ -42,8 +42,6 @@ export const useOperations = () => {
 export type { StockOperation, ForexOperation };
 
 export const OperationsProvider = ({ children }: { children: ReactNode }) => {
-  // const { user } = useAuth(); // Removido
-  
   const { 
     stockOperations, 
     addStockOperation: addStockOpService, // Renomeado para evitar conflito de nome
@@ -56,7 +54,7 @@ export const OperationsProvider = ({ children }: { children: ReactNode }) => {
     addForexOperation: addForexOpService, // Renomeado
     removeForexOperation: removeForexOpService, // Renomeado
     loading: forexLoading 
-  } = useForexOperations(mockUser); // Passando mockUser para Forex, pode ser ajustado depois
+  } = useForexOperations(); // Não passa mais mockUser
 
   const loading = stockLoading || forexLoading;
 
@@ -77,7 +75,7 @@ export const OperationsProvider = ({ children }: { children: ReactNode }) => {
     await addForexOpService(operation);
   };
 
-  const handleRemoveForexOperation = async (id: number) => {
+  const handleRemoveForexOperation = async (id: string) => {
     await removeForexOpService(id);
   };
 
@@ -89,7 +87,7 @@ export const OperationsProvider = ({ children }: { children: ReactNode }) => {
         addStockOperation: handleAddStockOperation, 
         addForexOperation: handleAddForexOperation,
         removeStockOperation: handleRemoveStockOperation,
-        removeForexOperation: handleRemoveForexOperation, // Certifique-se que removeForexOperation está correto no tipo e aqui
+        removeForexOperation: handleRemoveForexOperation,
         loading
       }}
     >

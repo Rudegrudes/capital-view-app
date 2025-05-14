@@ -124,7 +124,7 @@ export type Database = {
         Returns: undefined
       }
       delete_stock_operation_dependents: {
-        Args: { operation_uuid: string }
+        Args: Record<PropertyKey, never> | { operation_uuid: string }
         Returns: undefined
       }
     }

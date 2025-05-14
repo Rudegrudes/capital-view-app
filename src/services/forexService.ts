@@ -1,3 +1,4 @@
+
 "use client";
 
 import { toast } from "sonner";
@@ -146,4 +147,3 @@ export const removeForexOperation = async (id: string): Promise<boolean> => {
     throw new Error("Erro desconhecido ao tentar remover operação de forex.");
   }
 };
-

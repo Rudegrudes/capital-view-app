@@ -1,3 +1,4 @@
+
 "use client";
 
 import { toast } from "sonner";
@@ -131,4 +132,3 @@ export const removeStockOperation = async (id: string): Promise<boolean> => {
     throw new Error("Erro desconhecido ao tentar remover operação.");
   }
 };
-
